@@ -7,9 +7,6 @@ on:
 
 jobs:
   split-tickers:
-    if: >
-      github.event.name == 'workflow_dispatch' ||
-      (github.event.name == 'schedule' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.split.outputs.matrix }}
