@@ -6,7 +6,7 @@ on:
     - cron: '0 2 * * *'  # Daily at 2 AM UTC
 
 jobs:
-  split-tickers:
+  split-stocks:
     runs-on: ubuntu-latest
     if: >
       github.event_name == 'workflow_dispatch' ||
@@ -31,4 +31,32 @@ jobs:
           echo "🔢 Using CHUNK_SIZE=$CHUNK_SIZE"
           MATRIX=$(python stocks/split_stocks.py stocks/stocks.json "$CHUNK_SIZE")
           echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
-          echo $MATRIX
+  
+  run-fetch:
+    needs: split-tickers
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.split-stocks.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run Export
+        run: |
+          python stocks/export_stocks.py --tickers "${{ join(matrix.chunk), ',' }}"
+
+      - name: Upload Artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stock-${{ github.job }}-${{ strategy.job-index }}
+          path: output/*.json
