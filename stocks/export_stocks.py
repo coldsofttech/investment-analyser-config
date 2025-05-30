@@ -147,7 +147,7 @@ def export_ticker_data(tickers, output_dir="output", error_log="error.log"):
                     ],
                     "events": {
                         "dividends": {
-                            "date": upcoming_div_date,
+                            "date": upcoming_div_date.strftime('%Y-%m-%d') if upcoming_div_date else None,
                             "price": upcoming_div_price
                         }
                     },
