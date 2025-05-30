@@ -60,3 +60,62 @@ jobs:
         with:
           name: stock-${{ github.job }}-${{ strategy.job-index }}
           path: output/*.json
+
+  collect-and-push:
+    needs: run-fetch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Push Stocks JSONs to Target Repo
+        if: success()
+        env:
+          TARGET_REPO_MAIN: ${{ secrets.TARGET_REPO }}
+          TARGET_BRANCH_MAIN: ${{ secrets.TARGET_BRANCH }}
+          TARGET_REPO_TEST: ${{ secrets.TARGET_REPO_TEST }}
+          TARGET_BRANCH_TEST: ${{ secrets.TARGET_BRANCH_TEST }}
+          GITHUB_TOKEN: ${{ secrets.TARGET_REPO_PAT }}
+        run: |
+          echo "🔍 Branch is $GITHUB_REF"
+          if [[ "$GITHUB_REF" == "refs/heads/main" ]]; then
+            TARGET_REPO="$TARGET_REPO_MAIN"
+            BRANCH="$TARGET_BRANCH_MAIN"
+          elif [[ "$GITHUB_REF" == "refs/heads/test" ]]; then
+            TARGET_REPO="$TARGET_REPO_TEST"
+            BRANCH="$TARGET_BRANCH_TEST"
+          else
+            echo "🚫 Workflow not triggered on 'main' or 'test' branch. Exiting..."
+            exit 0
+          fi
+          
+          WORKDIR=$(mktemp -d)
+          
+          echo "📦 Cloning target repo..."
+          git clone --depth 1 --branch $BRANCH https://x-access-token:${{ secrets.TARGET_REPO_PAT }}@$TARGET_REPO $WORKDIR
+          
+          echo "📂 Creating docs/tickers folder if missing..."
+          mkdir -p $WORKDIR/docs/tickers
+
+          echo "📂 Copying output files..."
+          cp -f artifacts/**/*.json $WORKDIR/docs/tickers/
+
+          cd $WORKDIR
+          if git status --porcelain | grep .; then
+            git add docs/tickers/*.json
+            git commit -m "📈 Update JSONs in docs/tickers/ from ${{ github.repository }} at ${{ github.run_id }}"
+            git push origin $BRANCH
+            echo "✅ JSONs pushed to $TARGET_REPO docs/tickers/"
+          else
+            echo "ℹ️ No changes to commit."
+          fi
