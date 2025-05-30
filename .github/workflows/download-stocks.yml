@@ -1,0 +1,34 @@
+name: Download Ticker Data
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2 AM UTC
+
+jobs:
+  split-tickers:
+    if: |
+      (github.event.name == 'schedule' && github.ref == 'refs/head/main') ||
+      github.event.name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.split.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Generate Matrix Chunks
+        id: split
+        env:
+          CHUNK_SIZE: ${{ secrets.CHUNK_SIZE_TICKERS }}
+        run: |
+          CHUNK_SIZE=${CHUNK_SIZE:-10}
+          echo "🔢 Using CHUNK_SIZE=$CHUNK_SIZE"
+          MATRIX=$(python stocks/split_stocks.py stocks/stocks.json "$CHUNK_SIZE")
+          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+          echo $MATRIX
