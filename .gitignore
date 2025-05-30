@@ -172,3 +172,7 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Stocks
+/stocks/output
+/stocks/error.log
