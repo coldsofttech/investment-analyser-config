@@ -52,7 +52,7 @@ jobs:
 
       - name: Run Export
         run: |
-          python stocks/export_stocks.py --tickers "${{ join(matrix.chunk), ',' }}"
+          python stocks/export_stocks.py --tickers "${{ join(matrix.chunk, ',') }}"
 
       - name: Upload Artifact
         if: success()
