@@ -1,0 +1,86 @@
+[
+  {
+    "from": "GBP",
+    "to": "INR"
+  },
+  {
+    "from": "GBP",
+    "to": "USD"
+  },
+  {
+    "from": "GBP",
+    "to": "EUR"
+  },
+  {
+    "from": "GBP",
+    "to": "GBP"
+  },
+  {
+    "from": "GBp",
+    "to": "GBP"
+  },
+  {
+    "from": "GBP",
+    "to": "GBp"
+  },
+  {
+    "from": "INR",
+    "to": "GBP"
+  },
+  {
+    "from": "INR",
+    "to": "USD"
+  },
+  {
+    "from": "INR",
+    "to": "EUR"
+  },
+  {
+    "from": "INR",
+    "to": "INR"
+  },
+  {
+    "from": "INR",
+    "to": "GBp"
+  },
+  {
+    "from": "EUR",
+    "to": "GBP"
+  },
+  {
+    "from": "EUR",
+    "to": "INR"
+  },
+  {
+    "from": "EUR",
+    "to": "USD"
+  },
+  {
+    "from": "EUR",
+    "to": "EUR"
+  },
+  {
+    "from": "EUR",
+    "to": "GBp"
+  },
+  {
+    "from": "USD",
+    "to": "GBP"
+  },
+  {
+    "from": "USD",
+    "to": "INR"
+  },
+  {
+    "from": "USD",
+    "to": "EUR"
+  },
+  {
+    "from": "USD",
+    "to": "USD"
+  },
+  {
+    "from": "USD",
+    "to": "GBp"
+  }
+]
