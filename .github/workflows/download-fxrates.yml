@@ -1,12 +1,12 @@
-name: Download Ticker Data
+name: Download FX Rates Data
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 2 * * *'  # Daily at 2 AM UTC
+    - cron: '0 1 * * *'  # Daily at 1 AM UTC
 
 jobs:
-  split-stocks:
+  split-fxpairs:
     runs-on: ubuntu-latest
     if: >
       github.event_name == 'workflow_dispatch' ||
@@ -22,21 +22,26 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Install jq
+        run: |
+          sudo apt-get install jq
+
       - name: Generate Matrix Chunks
         id: split
         env:
-          CHUNK_SIZE: ${{ secrets.CHUNK_SIZE_TICKERS }}
+          CHUNK_SIZE: ${{ secrets.CHUNK_SIZE_FX }}
         run: |
-          CHUNK_SIZE=${CHUNK_SIZE:-10}
+          CHUNK_SIZE=${CHUNK_SIZE:-6}
           echo "🔢 Using CHUNK_SIZE=$CHUNK_SIZE"
-          MATRIX=$(python stocks/split_stocks.py stocks/stocks.json "$CHUNK_SIZE")
+          MATRIX=$(python fxrates/split_fxpairs.py fxrates/fxpairs.json "$CHUNK_SIZE" | jq -c .)
           echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
-  
+
   run-fetch:
-    needs: split-stocks
+    needs: split-fxpairs
     runs-on: ubuntu-latest
     strategy:
-      matrix: ${{ fromJson(needs.split-stocks.outputs.matrix) }}
+      matrix:
+        chunk: ${{ fromJson(needs.split-fxpairs.outputs.matrix) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -48,17 +53,18 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install -r stocks/requirements.txt
+          pip install -r fxrates/requirements.txt
 
       - name: Run Export
         run: |
-          python stocks/export_stocks.py --tickers "${{ join(matrix.chunk, ',') }}"
+          FXPAIRS_JSON='${{ toJson(matrix.chunk) }}'
+          python fxrates/export_fxrates.py --fxpairs "$FXPAIRS_JSON"
 
       - name: Upload Artifact
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: stock-${{ github.job }}-${{ strategy.job-index }}
+          name: fxrate-${{ github.job }}-${{ strategy.job-index }}
           path: output/*.json
 
   collect-and-push:
@@ -104,18 +110,18 @@ jobs:
           echo "📦 Cloning target repo..."
           git clone --depth 1 --branch $BRANCH https://x-access-token:${{ secrets.TARGET_REPO_PAT }}@$TARGET_REPO $WORKDIR
           
-          echo "📂 Creating docs/tickers folder if missing..."
-          mkdir -p $WORKDIR/docs/tickers
+          echo "📂 Creating docs/fxrates folder if missing..."
+          mkdir -p $WORKDIR/docs/fxrates
 
           echo "📂 Copying output files..."
-          cp -f artifacts/**/*.json $WORKDIR/docs/tickers/
+          cp -f artifacts/**/*.json $WORKDIR/docs/fxrates/
 
           cd $WORKDIR
           if git status --porcelain | grep .; then
-            git add docs/tickers/*.json
-            git commit -m "📈 Update JSONs in docs/tickers/ from ${{ github.repository }} at ${{ github.run_id }}"
+            git add docs/fxrates/*.json
+            git commit -m "📈 Update JSONs in docs/fxrates/ from ${{ github.repository }} at ${{ github.run_id }}"
             git push origin $BRANCH
-            echo "✅ JSONs pushed to $TARGET_REPO docs/tickers/"
+            echo "✅ JSONs pushed to $TARGET_REPO docs/fxrates/"
           else
             echo "ℹ️ No changes to commit."
           fi
