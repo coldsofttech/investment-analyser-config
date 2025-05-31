@@ -175,4 +175,8 @@ cython_debug/
 
 # Stocks
 /stocks/output
-/stocks/error.log
+/stocks/*.log
+
+# FX Rates
+/fxrates/output
+/fxrates/*.log
