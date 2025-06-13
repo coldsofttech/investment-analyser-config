@@ -237,8 +237,8 @@ def export_ticker_data(tickers, output_dir="output", error_log="error.log"):
 
                 if ticker_type == "ETF":
                     ticker_dict["holdings"] = {
-                        "top_holdings": _fetch_top_holdings(yf_ticker),
-                        "sector_weights": _fetch_sector_weightings(yf_ticker)
+                        "topHoldings": _fetch_top_holdings(yf_ticker),
+                        "sectorWeights": _fetch_sector_weightings(yf_ticker)
                     }
 
                 result_dict[ticker] = ticker_dict
