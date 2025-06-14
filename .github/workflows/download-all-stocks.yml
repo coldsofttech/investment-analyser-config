@@ -19,12 +19,26 @@ jobs:
 
       - name: Clone Target Repo
         env:
-          TARGET_REPO: ${{ secrets.TARGET_REPO }}
-          TARGET_BRANCH: ${{ secrets.TARGET_BRANCH }}
+          TARGET_REPO_MAIN: ${{ secrets.TARGET_REPO }}
+          TARGET_BRANCH_MAIN: ${{ secrets.TARGET_BRANCH }}
+          TARGET_REPO_TEST: ${{ secrets.TARGET_REPO_TEST }}
+          TARGET_BRANCH_TEST: ${{ secrets.TARGET_BRANCH_TEST }}
           GITHUB_TOKEN: ${{ secrets.TARGET_REPO_PAT }}
         run: |
-          echo "Cloning target repo $TARGET_REPO branch $TARGET_BRANCH"
-          git clone --depth 1 --branch "$TARGET_BRANCH" https://x-access-token:${GITHUB_TOKEN}@$TARGET_REPO target-repo
+          echo "🔍 Branch is $GITHUB_REF"
+          if [[ "$GITHUB_REF" == "refs/heads/main" ]]; then
+            TARGET_REPO="$TARGET_REPO_MAIN"
+            BRANCH="$TARGET_BRANCH_MAIN"
+          elif [[ "$GITHUB_REF" == "refs/heads/test" ]]; then
+            TARGET_REPO="$TARGET_REPO_TEST"
+            BRANCH="$TARGET_BRANCH_TEST"
+          else
+            echo "🚫 Workflow not triggered on 'main' or 'test' branch. Exiting..."
+            exit 0
+          fi
+          
+          echo "Cloning target repo $TARGET_REPO branch $BRANCH"
+          git clone --depth 1 --branch "$BRANCH" https://x-access-token:${GITHUB_TOKEN}@$TARGET_REPO target-repo
 
       - name: Copy all.json to Target Repo
         run: |
@@ -39,7 +53,7 @@ jobs:
           if [[ `git status --porcelain` ]]; then
             git add docs/tickers/all.json
             git commit -m "Update all.json from ${{ github.repository }} run ${{ github.run_id }}"
-            git push origin $TARGET_BRANCH
+            git push origin $BRANCH
             echo "Pushed updated all.json to target repo."
           else
             echo "No changes detected, nothing to commit."
