@@ -208,7 +208,6 @@ def export_ticker_data(tickers, output_dir="output", error_log="error.log"):
                         "website": _safe_get(info, "website", ""),
                         "currency": _safe_get(info, "currency", ""),
                         "beta": _safe_get(info, "beta", ""),
-                        "marketCap": _safe_get(info, "marketCap", ""),
                         "payoutRatio": _safe_get(info, "payoutRatio", ""),
                         "dividendYield": _safe_get(info, "dividendYield", ""),
                         "dividendFrequency": _calculate_dividend_frequency(valid_div_data),
@@ -240,6 +239,9 @@ def export_ticker_data(tickers, output_dir="output", error_log="error.log"):
                         "topHoldings": _fetch_top_holdings(yf_ticker),
                         "sectorWeights": _fetch_sector_weightings(yf_ticker)
                     }
+                    ticker_dict["info"]["marketCap"] = _safe_get(info, "totalAssets", "")
+                else:
+                    ticker_dict["info"]["marketCap"] = _safe_get(info, "marketCap", "")
 
                 result_dict[ticker] = ticker_dict
                 result_dict["metadata"] = metadata_dict
