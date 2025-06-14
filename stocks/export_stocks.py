@@ -164,6 +164,8 @@ def _fetch_sector_weightings(ticker_obj):
 
 def export_ticker_data(tickers, output_dir="output", error_log="error.log"):
     os.makedirs(output_dir, exist_ok=True)
+    os.makedirs(os.path.join(output_dir, "stocks"), exist_ok=True)
+    os.makedirs(os.path.join(output_dir, "metadata"), exist_ok=True)
     total = len(tickers)
     any_errors = False
 
@@ -246,7 +248,7 @@ def export_ticker_data(tickers, output_dir="output", error_log="error.log"):
                 result_dict[ticker] = ticker_dict
                 result_dict["metadata"] = metadata_dict
 
-                output_path = os.path.join(output_dir, f"{ticker}.json")
+                output_path = os.path.join(output_dir, "stocks", f"{ticker}.json")
                 with open(output_path, "w") as f:
                     json.dump(result_dict, f, indent=4, sort_keys=True)
 
@@ -261,6 +263,10 @@ def export_ticker_data(tickers, output_dir="output", error_log="error.log"):
     if any_errors:
         print("⚠️ Some tickers failed. See 'error.log' for details.")
         sys.exit(1)
+
+    if tickers:
+        with open(os.path.join(output_dir, "metadata", "tickers_processed.json"), "w") as f:
+            json.dump([t.upper() for t in tickers], f, indent=4, sort_keys=True)
 
 
 if __name__ == "__main__":
