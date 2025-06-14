@@ -1,0 +1,46 @@
+name: Download all.json (Tickers Dropdown)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 0 * * 6'  # Every Saturday at 12:30 AM UTC
+
+jobs:
+  copy-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Clone Target Repo
+        env:
+          TARGET_REPO: ${{ secrets.TARGET_REPO }}
+          TARGET_BRANCH: ${{ secrets.TARGET_BRANCH }}
+          GITHUB_TOKEN: ${{ secrets.TARGET_REPO_PAT }}
+        run: |
+          echo "Cloning target repo $TARGET_REPO branch $TARGET_BRANCH"
+          git clone --depth 1 --branch "$TARGET_BRANCH" https://x-access-token:${GITHUB_TOKEN}@$TARGET_REPO target-repo
+
+      - name: Copy all.json to Target Repo
+        run: |
+          mkdir -p target-repo/docs/tickers
+          cp stocks/stocks.json target-repo/docs/tickers/all.json
+
+      - name: Commit and Push
+        working-directory: target-repo
+        env:
+          GITHUB_TOKEN: ${{ secrets.TARGET_REPO_PAT }}
+        run: |
+          if [[ `git status --porcelain` ]]; then
+            git add docs/tickers/all.json
+            git commit -m "Update all.json from ${{ github.repository }} run ${{ github.run_id }}"
+            git push origin $TARGET_BRANCH
+            echo "Pushed updated all.json to target repo."
+          else
+            echo "No changes detected, nothing to commit."
+          fi
