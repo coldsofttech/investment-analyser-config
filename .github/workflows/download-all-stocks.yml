@@ -6,7 +6,34 @@ on:
     - cron: '30 0 * * 6'  # Every Saturday at 12:30 AM UTC
 
 jobs:
-  copy-and-push:
+  run-fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Dependencies
+        run: |
+          pip install -r stocks/requirements.txt
+
+      - name: Run Export
+        run: |
+          python stocks/export_all_stocks.py --input stocks/stocks.json
+
+      - name: Upload Artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stock-${{ github.job }}-${{ strategy.job-index }}
+          path: output/all.json
+
+  collect-and-push:
+    needs: run-fetch
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -17,7 +44,13 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Clone Target Repo
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Push JSON to Target Repo
+        if: success()
         env:
           TARGET_REPO_MAIN: ${{ secrets.TARGET_REPO }}
           TARGET_BRANCH_MAIN: ${{ secrets.TARGET_BRANCH }}
@@ -37,24 +70,23 @@ jobs:
             exit 0
           fi
           
-          echo "Cloning target repo $TARGET_REPO branch $BRANCH"
-          git clone --depth 1 --branch "$BRANCH" https://x-access-token:${GITHUB_TOKEN}@$TARGET_REPO target-repo
-
-      - name: Copy all.json to Target Repo
-        run: |
-          mkdir -p target-repo/docs/tickers
-          cp stocks/stocks.json target-repo/docs/tickers/all.json
-
-      - name: Commit and Push
-        working-directory: target-repo
-        env:
-          GITHUB_TOKEN: ${{ secrets.TARGET_REPO_PAT }}
-        run: |
-          if [[ `git status --porcelain` ]]; then
+          WORKDIR=$(mktemp -d)
+          
+          echo "📦 Cloning target repo..."
+          git clone --depth 1 --branch $BRANCH https://x-access-token:${{ secrets.TARGET_REPO_PAT }}@$TARGET_REPO $WORKDIR
+          
+          echo "📂 Creating docs/tickers folder if missing..."
+          mkdir -p $WORKDIR/docs/tickers
+          
+          echo "📂 Copying output files..."
+          cp -f artifacts/**/all.json $WORKDIR/docs/tickers/
+          
+          cd $WORKDIR
+          if git status --porcelain | grep .; then
             git add docs/tickers/all.json
-            git commit -m "Update all.json from ${{ github.repository }} run ${{ github.run_id }}"
+            git commit -m "📈 Update all.json in docs/tickers/ from ${{ github.repository }} at ${{ github.run_id }}"
             git push origin $BRANCH
-            echo "Pushed updated all.json to target repo."
+            echo "✅ JSON pushed to $TARGET_REPO docs/tickers/"
           else
-            echo "No changes detected, nothing to commit."
+            echo "ℹ️ No changes to commit."
           fi
