@@ -97,7 +97,12 @@ def safe_get(info, key, default=None):
 
 
 def calculate_volatility(raw_data, price_col):
-    returns = raw_data[price_col].pct_change()
+    price_series = raw_data[price_col].dropna()
+    if len(price_series) < 2:
+        return 0.0
+    returns = price_series.pct_change().dropna()
+    if returns.empty:
+        return 0.0
     daily_vol = returns.std()
     annual_vol = daily_vol * np.sqrt(252)
     return round(annual_vol * 100, 2)
