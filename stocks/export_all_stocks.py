@@ -113,7 +113,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--max-workers",
-        default=10,
+        default=20,
         type=int,
         help="Maximum number of parallel threads."
     )
