@@ -42,7 +42,7 @@ def fetch_ticker_data(ticker):
             "dividendFrequency": stock_utils.calculate_dividend_frequency(valid_div_data),
             "website": stock_utils.safe_get(info, "website", ""),
             "companyDescription": stock_utils.safe_get(info, "longBusinessSummary", ""),
-            "currentPrice": stock_utils.safe_get(info, "currentPrice", "")
+            "currentPrice": float(stock_utils.safe_get(info, "currentPrice", csv_data.iloc[-1][price_col]))
         }
 
         cagr = stock_utils.calculate_short_and_long_term_cagr(valid_data, price_col)
