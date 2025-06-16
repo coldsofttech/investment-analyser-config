@@ -39,7 +39,10 @@ def fetch_ticker_data(ticker):
             "beta": stock_utils.safe_get(info, "beta", ""),
             "volatility": stock_utils.calculate_volatility(raw_data.copy(), price_col),
             "dividendYield": stock_utils.safe_get(info, "dividendYield", ""),
-            "dividendFrequency": stock_utils.calculate_dividend_frequency(valid_div_data)
+            "dividendFrequency": stock_utils.calculate_dividend_frequency(valid_div_data),
+            "website": stock_utils.safe_get(info, "website", ""),
+            "companyDescription": stock_utils.safe_get(info, "longBusinessSummary", ""),
+            "currentPrice": float(stock_utils.safe_get(info, "currentPrice", csv_data.iloc[-1][price_col]))
         }
 
         cagr = stock_utils.calculate_short_and_long_term_cagr(valid_data, price_col)
@@ -60,7 +63,6 @@ def fetch_ticker_data(ticker):
         return result
     except Exception as e:
         raise RuntimeError(f"Failed to fetch {ticker}: {str(e)}")
-        # return ticker, {"error": str(e)}
 
 
 def export_ticker_data(tickers, output_dir="output", error_log="error.log", max_workers=10):
