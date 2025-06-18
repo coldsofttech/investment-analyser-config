@@ -6,7 +6,7 @@ import pandas as pd
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 
-@retry(stop=stop_after_attempt(10), wait=wait_random_exponential(min=2, max=5))
+@retry(stop=stop_after_attempt(5), wait=wait_random_exponential(min=2, max=5))
 def fetch_history(ticker_obj, period='max'):
     data = ticker_obj.history(period=period)
     if data.empty:
@@ -14,7 +14,7 @@ def fetch_history(ticker_obj, period='max'):
     return data
 
 
-@retry(stop=stop_after_attempt(10), wait=wait_random_exponential(min=2, max=5))
+@retry(stop=stop_after_attempt(5), wait=wait_random_exponential(min=2, max=5))
 def fetch_info(ticker_obj):
     info = ticker_obj.info
     if not info or len(info) < 5:
@@ -25,12 +25,12 @@ def fetch_info(ticker_obj):
     return info
 
 
-@retry(stop=stop_after_attempt(10), wait=wait_random_exponential(min=2, max=5))
+@retry(stop=stop_after_attempt(5), wait=wait_random_exponential(min=2, max=5))
 def fetch_dividends(ticker_obj):
     return ticker_obj.dividends.copy()
 
 
-@retry(stop=stop_after_attempt(10), wait=wait_random_exponential(min=2, max=5))
+@retry(stop=stop_after_attempt(5), wait=wait_random_exponential(min=2, max=5))
 def fetch_calendar(ticker_obj):
     return ticker_obj.calendar or {}
 
@@ -73,7 +73,7 @@ def fetch_sector_weightings(ticker_obj):
         return []
 
 
-@retry(stop=stop_after_attempt(10), wait=wait_random_exponential(min=2, max=5))
+@retry(stop=stop_after_attempt(5), wait=wait_random_exponential(min=2, max=5))
 def download_stock_info(raw_data):
     csv_data = pd.read_csv(
         StringIO(raw_data.to_csv(index=True)),
