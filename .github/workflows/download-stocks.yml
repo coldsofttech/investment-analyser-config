@@ -27,7 +27,7 @@ jobs:
         env:
           CHUNK_SIZE: ${{ secrets.CHUNK_SIZE_TICKERS }}
         run: |
-          CHUNK_SIZE=${CHUNK_SIZE:-10}
+          CHUNK_SIZE=$CHUNK_SIZE
           echo "🔢 Using CHUNK_SIZE=$CHUNK_SIZE"
           MATRIX=$(python stocks/split_stocks.py stocks/stocks.json "$CHUNK_SIZE")
           echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
