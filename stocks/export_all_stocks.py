@@ -81,12 +81,8 @@ def export_ticker_data(tickers, output_dir="output", error_log="error.log", max_
             ticker = futures[future]
             try:
                 data = future.result()
-                # if "error" in data:
-                #     errors[data["ticker"]] = data["error"]
-                # else:
                 results.append(data)
             except Exception as e:
-                # ticker = futures[future]
                 errors[ticker] = str(e)
 
     all_path = os.path.join(output_dir, "all.json")
