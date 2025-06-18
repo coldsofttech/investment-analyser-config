@@ -8,6 +8,9 @@ on:
 jobs:
   run-fetch:
     runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'schedule' && github.ref == 'refs/heads/main')
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -25,12 +28,18 @@ jobs:
         run: |
           python stocks/export_all_stocks.py --input stocks/stocks.json
 
-      - name: Upload Artifact
+      - name: Upload JSON Artifact
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: stock-${{ github.job }}-${{ strategy.job-index }}
           path: output/all.json
+
+      - name: Upload Error Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: error-${{ github.job }}-${{ strategy.job-index }}
+          path: error.log
 
   collect-and-push:
     needs: run-fetch
