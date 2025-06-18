@@ -54,12 +54,18 @@ jobs:
         run: |
           python stocks/export_stocks.py --tickers "${{ join(matrix.chunk, ',') }}"
 
-      - name: Upload Artifact
+      - name: Upload JSON Artifact
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: stock-${{ github.job }}-${{ strategy.job-index }}
           path: output/*.json
+
+      - name: Upload Error Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: error-${{ github.job }}-${{ strategy.job-index }}
+          path: error.log
 
   collect-and-push:
     needs: run-fetch
