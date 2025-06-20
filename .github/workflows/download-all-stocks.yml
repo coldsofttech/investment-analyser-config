@@ -32,7 +32,12 @@ jobs:
           MATRIX=$(python stocks/split_stocks.py stocks/stocks.json "$CHUNK_SIZE")
           echo "$MATRIX" > matrix.json
           echo "matrix=$(cat matrix.json)" >> $GITHUB_OUTPUT
-          echo "🔁 Generated matrix: $MATRIX"
+#          echo "🔁 Generated matrix: $MATRIX"
+
+      - name: Generated Matrix
+        run: |
+          echo "🔁 Generated matrix"
+          echo '${{ toJson(needs.split-stocks.outputs.matrix) }}'
 
   run-fetch:
     needs: split-stocks
