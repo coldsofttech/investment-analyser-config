@@ -43,7 +43,7 @@ jobs:
     needs: split-stocks
     runs-on: ubuntu-latest
     strategy:
-      matrix: ${{ fromJson(needs.split-stocks.outputs.matrix) }}
+      matrix: ${{ fromJson(needs.gen_matrix.outputs.matrix) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
