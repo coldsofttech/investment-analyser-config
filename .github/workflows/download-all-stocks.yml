@@ -12,7 +12,7 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'schedule' && github.ref == 'refs/heads/main')
     outputs:
-      matrix: ${{ steps.split.outputs.matrix }}
+      matrix: ${{ steps.gen_matrix.outputs.matrix }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -43,7 +43,7 @@ jobs:
     needs: split-stocks
     runs-on: ubuntu-latest
     strategy:
-      matrix: ${{ fromJson(needs.gen_matrix.outputs.matrix) }}
+      matrix: ${{ fromJson(needs.split-stocks.outputs.matrix) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
