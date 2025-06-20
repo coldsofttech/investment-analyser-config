@@ -2,6 +2,7 @@ import argparse
 import concurrent
 import json
 import os
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 
 import yfinance as yf
@@ -71,7 +72,7 @@ def export_ticker_data(tickers, output_dir="output", error_log="error.log", max_
     errors = {}
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {executor.submit(fetch_ticker_data, ticker): ticker for ticker in tickers}
+        futures = {executor.submit(fetch_ticker_data, ticker, output_dir): ticker for ticker in tickers}
 
         for future in tqdm(
                 concurrent.futures.as_completed(futures),
@@ -85,8 +86,8 @@ def export_ticker_data(tickers, output_dir="output", error_log="error.log", max_
             except Exception as e:
                 errors[ticker] = str(e)
 
-    all_path = os.path.join(output_dir, "all.json")
-    with open(all_path, "w") as jf:
+    output_path = os.path.join(output_dir, f"ticker_{str(uuid.uuid4())}.json")
+    with open(output_path, "w") as jf:
         json.dump(results, jf, indent=4, sort_keys=True)
 
     if errors:
@@ -94,7 +95,7 @@ def export_ticker_data(tickers, output_dir="output", error_log="error.log", max_
             for tkr, err in errors.items():
                 ef.write(f"{tkr}: {err}\n")
 
-    print(f"\n✅ Exported {len(results)} tickers to {all_path}")
+    print(f"\n✅ Exported {len(results)} tickers to {output_path}")
     if errors:
         print(f"⚠️ {len(errors)} errors logged to {error_log}")
 
@@ -102,10 +103,10 @@ def export_ticker_data(tickers, output_dir="output", error_log="error.log", max_
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Fetch high-level stock/ETF data using yfinance.")
     parser.add_argument(
-        "--input",
+        "--tickers",
         required=True,
         type=str,
-        help="Path of the input JSON file. JSON file should be a list of tickers."
+        help="Comma-separated ticker symbols (e.g. AAPL, MSFT, VOO)."
     )
     parser.add_argument(
         "--max-workers",
@@ -114,8 +115,9 @@ if __name__ == "__main__":
         help="Maximum number of parallel threads."
     )
     args = parser.parse_args()
-
-    with open(args.input, "r") as f:
-        ticker_list = json.load(f)
-
+    ticker_list = [
+        t.strip().upper()
+        for t in args.tickers.split(",")
+        if t.strip()
+    ]
     export_ticker_data(ticker_list, max_workers=args.max_workers)
