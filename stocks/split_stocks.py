@@ -21,7 +21,7 @@ def split_tickers():
         for i in range(0, len(unique_tickers), chunk_size)
     ]
     matrix = {"include": [{"chunk": chunk} for chunk in chunks]}
-    print(json.dumps(matrix, indent=4, sort_keys=True))
+    print(json.dumps(matrix))
 
 
 if __name__ == "__main__":
