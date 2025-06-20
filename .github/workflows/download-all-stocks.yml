@@ -32,7 +32,7 @@ jobs:
           MATRIX=$(python stocks/split_stocks.py stocks/stocks.json "$CHUNK_SIZE" | jq -c .)
           echo "⬇️ Matrix: $MATRIX"
           echo "$MATRIX"
-          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+          echo "matrix=$(jq -c <<< "$MATRIX")" >> $GITHUB_OUTPUT
 
       - name: Generated Matrix
         run: |
