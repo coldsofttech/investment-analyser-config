@@ -30,7 +30,9 @@ jobs:
           CHUNK_SIZE=$CHUNK_SIZE
           echo "🔢 Using CHUNK_SIZE=$CHUNK_SIZE"
           MATRIX=$(python stocks/split_stocks.py stocks/stocks.json "$CHUNK_SIZE")
-          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+          echo "$MATRIX" > matrix.json
+          echo "matrix=$(cat matrix.json)" >> $GITHUB_OUTPUT
+          echo "🔁 Generated matrix: $MATRIX"
 
   run-fetch:
     needs: split-stocks
