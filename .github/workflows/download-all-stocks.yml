@@ -31,13 +31,8 @@ jobs:
           echo "🔢 Using CHUNK_SIZE=$CHUNK_SIZE"
           MATRIX=$(python stocks/split_stocks.py stocks/stocks.json "$CHUNK_SIZE" | jq -c .)
           echo "⬇️ Matrix: $MATRIX"
-#          MATRIX_ESCAPED=$(echo "$MATRIX" | jq -c .)
-#          echo "matrix=$MATRIX_ESCAPED" >> $GITHUB_OUTPUT
           echo "$MATRIX"
           echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
-#          echo "matrix<<EOF" >> "$GITHUB_OUTPUT"
-#          echo "$MATRIX" >> "$GITHUB_OUTPUT"
-#          echo "EOF" >> "$GITHUB_OUTPUT"
 
       - name: Generated Matrix
         run: |
