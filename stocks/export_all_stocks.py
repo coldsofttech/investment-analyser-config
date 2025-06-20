@@ -72,7 +72,7 @@ def export_ticker_data(tickers, output_dir="output", error_log="error.log", max_
     errors = {}
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {executor.submit(fetch_ticker_data, ticker, output_dir): ticker for ticker in tickers}
+        futures = {executor.submit(fetch_ticker_data, ticker): ticker for ticker in tickers}
 
         for future in tqdm(
                 concurrent.futures.as_completed(futures),
