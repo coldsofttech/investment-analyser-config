@@ -6,11 +6,37 @@ on:
     - cron: '30 0 * * 6'  # Every Saturday at 12:30 AM UTC
 
 jobs:
-  run-fetch:
+  split-stocks:
     runs-on: ubuntu-latest
     if: >
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'schedule' && github.ref == 'refs/heads/main')
+    outputs:
+      matrix: ${{ steps.split.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Generate Matrix Chunks
+        id: split
+        env:
+          CHUNK_SIZE: ${{ secrets.CHUNK_SIZE_TICKERS }}
+        run: |
+          CHUNK_SIZE=$CHUNK_SIZE
+          echo "🔢 Using CHUNK_SIZE=$CHUNK_SIZE"
+          MATRIX=$(python stocks/split_stocks.py stocks/stocks.json "$CHUNK_SIZE")
+          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+
+  run-fetch:
+    needs: split-stocks
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.split-stocks.outputs.matrix) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -26,14 +52,14 @@ jobs:
 
       - name: Run Export
         run: |
-          python stocks/export_all_stocks.py --input stocks/stocks.json
+          python stocks/export_all_stocks.py --tickers "${{ join(matrix.chunk, ',') }}"
 
       - name: Upload JSON Artifact
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: stock-${{ github.job }}-${{ strategy.job-index }}
-          path: output/all.json
+          path: output/*.json
 
       - name: Upload Error Artifact
         uses: actions/upload-artifact@v4
@@ -41,8 +67,31 @@ jobs:
           name: error-${{ github.job }}-${{ strategy.job-index }}
           path: error.log
 
-  collect-and-push:
+  merge:
     needs: run-fetch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Download All Chunks
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Merge Chunks
+        run: |
+          python stocks/merge_all_stocks.py --input-dir artifacts --output output/all.json
+
+      - name: Upload JSON Artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stock-${{ github.job }}-${{ strategy.job-index }}
+          path: output/*.json
+
+  collect-and-push:
+    needs: merge
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -53,7 +102,7 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Download All Artifacts
+      - name: Download Artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
