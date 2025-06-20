@@ -23,7 +23,7 @@ jobs:
           python-version: '3.12'
 
       - name: Generate Matrix Chunks
-        id: split
+        id: gen_matrix
         env:
           CHUNK_SIZE: ${{ secrets.CHUNK_SIZE_TICKERS }}
         run: |
@@ -37,7 +37,7 @@ jobs:
       - name: Generated Matrix
         run: |
           echo "🔁 Generated matrix"
-          echo '${{ toJson(needs.split-stocks.outputs.matrix) }}'
+          echo '${{ toJson(steps.gen_matrix.outputs.matrix) }}'
 
   run-fetch:
     needs: split-stocks
