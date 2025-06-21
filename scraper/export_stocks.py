@@ -59,6 +59,21 @@ def select_country(driver, country):
     print(f"✅ Apply button clicked.")
 
 
+def select_pagination(driver, value=100):
+    wait = get_waiter(driver, 10)
+    print(f"⏳ Awaiting for 'Pagination' dropdown")
+    pagination_dropdown = wait.until(EC.element_to_be_clickable(
+        (By.XPATH, '//div[contains(@class, "paginationContainer")]//div[contains(@class, "menuContainer")]//button')
+    ))
+    print(f"✅ Pagination dropdown clicked.")
+    pagination_dropdown.click()
+    value_button = wait.until(EC.element_to_be_clickable(
+        (By.XPATH, f'//div[contains(@class, "dialog-container")]//div[contains(@class, "itm") and @role="option" and @data-value="{value}"]')
+    ))
+    value_button.click()
+    print(f"✅ {value} option selected.")
+
+
 def export_tickers(
         country,
         ticker_type="EQUITY",
@@ -78,6 +93,7 @@ def export_tickers(
     driver.get(url)
     accept_all(driver)
     select_country(driver, country)
+    select_pagination(driver)
     input()
 
 
