@@ -128,10 +128,10 @@ def export_ticker_data(tickers, output_dir="output", error_log="error.log", max_
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Fetch stock/ETF data using yfinance.")
     parser.add_argument(
-        "--tickers",
+        "--chunk-id",
         required=True,
-        type=str,
-        help="Comma-separated ticker symbols (e.g. AAPL, MSFT, VOO)."
+        type=int,
+        help="Id of the chunk file to process."
     )
     parser.add_argument(
         "--max-workers",
@@ -140,9 +140,13 @@ if __name__ == "__main__":
         help="Maximum number of parallel threads."
     )
     args = parser.parse_args()
+    chunk_file = os.path.join("chunks", f"chunk_{args.chunk_id}.json")
+    with open(chunk_file, "r") as c_file:
+        tickers_raw = json.load(c_file)
+
     ticker_list = [
         t.strip().upper()
-        for t in args.tickers.split(",")
+        for t in tickers_raw
         if t.strip()
     ]
     export_ticker_data(ticker_list, max_workers=args.max_workers)
