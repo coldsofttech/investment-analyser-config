@@ -25,13 +25,22 @@ jobs:
       - name: Generate Matrix Chunks
         id: gen_matrix
         env:
-          CHUNK_SIZE: ${{ secrets.CHUNK_SIZE_TICKERS }}
+          CHUNK_SIZE: 40
         run: |
           CHUNK_SIZE=$CHUNK_SIZE
           echo "🔢 Using CHUNK_SIZE=$CHUNK_SIZE"
           python stocks/split_stocks.py --input stocks/stocks.json --chunk-size "$CHUNK_SIZE"
           echo "🔁 Reading chunk IDs from file..."
           echo "matrix=$(jq -c . < chunk_ids.json)" >> $GITHUB_OUTPUT
+          
+  debug-matrix:
+    needs: split-stocks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Display Generated Matrix
+        run: |
+          echo "🪪 Matrix output from split-stocks"
+          echo "${{ needs.split-stocks.outputs.matrix }}"
 
   run-fetch:
     needs: split-stocks
