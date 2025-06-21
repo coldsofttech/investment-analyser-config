@@ -5,6 +5,7 @@ import os
 
 
 def merge_ticker_data(input_dir, output="output"):
+    os.makedirs(output, exist_ok=True)
     ticker_map = {}
     json_files = glob.glob(os.path.join(input_dir, "**/ticker_*.json"), recursive=True)
 
