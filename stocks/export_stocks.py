@@ -2,6 +2,8 @@ import argparse
 import concurrent.futures
 import json
 import os
+import random
+import time
 from datetime import datetime
 
 import yfinance as yf
@@ -12,6 +14,8 @@ import stock_utils
 
 
 def fetch_ticker_data(ticker, output_dir="output"):
+    time.sleep(random.uniform(0.1, 0.5))
+
     try:
         print(f"📥 Fetching data for {ticker}...")
         timestamp = datetime.now().isoformat()
