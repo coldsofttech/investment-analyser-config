@@ -6,31 +6,39 @@ import pandas as pd
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 
-@retry(stop=stop_after_attempt(10), wait=wait_random_exponential(min=2, max=5))
+@retry(stop=stop_after_attempt(5), wait=wait_random_exponential(min=2, max=5))
 def fetch_history(ticker_obj, period='max'):
     data = ticker_obj.history(period=period)
+
+    if data.empty and period == 'max':
+        print(f"⚠️ 'max' period returned no data for {ticker_obj.ticker}, retrying with '20y'")
+        data = ticker_obj.history(period='20y')
+
     if data.empty:
         raise ValueError(f"No historical data found for ticker.")
+
     return data
 
 
-@retry(stop=stop_after_attempt(10), wait=wait_random_exponential(min=2, max=5))
+@retry(stop=stop_after_attempt(5), wait=wait_random_exponential(min=2, max=5))
 def fetch_info(ticker_obj):
     info = ticker_obj.info
     if not info or len(info) < 5:
-        print(f"🔁 Retrying with scrape=True for {ticker_obj.ticker}")
-        info = ticker_obj.get_info(scrape=True)
+        print(f"🔁 Retrying by forcing re-fetch for {ticker_obj.ticker}")
+        info = ticker_obj.get_info()
+
     if not info or len(info) < 5:
-        raise ValueError(f"_fetch_info failed for {ticker_obj.ticker}: info is empty or invalid")
+        raise ValueError(f"fetch_info failed for {ticker_obj.ticker}: info is empty or invalid.")
+
     return info
 
 
-@retry(stop=stop_after_attempt(10), wait=wait_random_exponential(min=2, max=5))
+@retry(stop=stop_after_attempt(5), wait=wait_random_exponential(min=2, max=5))
 def fetch_dividends(ticker_obj):
     return ticker_obj.dividends.copy()
 
 
-@retry(stop=stop_after_attempt(10), wait=wait_random_exponential(min=2, max=5))
+@retry(stop=stop_after_attempt(5), wait=wait_random_exponential(min=2, max=5))
 def fetch_calendar(ticker_obj):
     return ticker_obj.calendar or {}
 
@@ -73,7 +81,7 @@ def fetch_sector_weightings(ticker_obj):
         return []
 
 
-@retry(stop=stop_after_attempt(10), wait=wait_random_exponential(min=2, max=5))
+@retry(stop=stop_after_attempt(5), wait=wait_random_exponential(min=2, max=5))
 def download_stock_info(raw_data):
     csv_data = pd.read_csv(
         StringIO(raw_data.to_csv(index=True)),
@@ -97,7 +105,12 @@ def safe_get(info, key, default=None):
 
 
 def calculate_volatility(raw_data, price_col):
-    returns = raw_data[price_col].pct_change()
+    price_series = raw_data[price_col].dropna()
+    if len(price_series) < 2:
+        return 0.0
+    returns = price_series.pct_change().dropna()
+    if returns.empty:
+        return 0.0
     daily_vol = returns.std()
     annual_vol = daily_vol * np.sqrt(252)
     return round(annual_vol * 100, 2)
@@ -199,3 +212,23 @@ def calculate_short_and_long_term_cagr(data, price_col, today=None):
         "shortTermCagr": combine(["1y", "2y"]),
         "longTermCagr": combine(["5y", "10y", "15y", "20y"])
     }
+
+
+def get_root_error_message(exc):
+    current = exc
+    last_message = str(current)
+
+    while True:
+        cause = getattr(current, "__cause__", None)
+        context = getattr(current, "__context__", None)
+
+        if cause is not None:
+            last_message = str(cause)
+            current = cause
+        elif context is not None:
+            last_message = str(context)
+            current = context
+        else:
+            break
+
+    return last_message

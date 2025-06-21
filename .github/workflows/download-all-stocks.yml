@@ -2,12 +2,65 @@ name: Download all.json (Tickers Dropdown)
 
 on:
   workflow_dispatch:
+    inputs:
+      enable_debug_mode:
+        description: 'Run debug-matrix job?'
+        required: false
+        default: false
   schedule:
     - cron: '30 0 * * 6'  # Every Saturday at 12:30 AM UTC
 
 jobs:
-  run-fetch:
+  split-stocks:
     runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'schedule' && github.ref == 'refs/heads/main')
+    outputs:
+      matrix: ${{ steps.gen_matrix.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Generate Matrix Chunks
+        id: gen_matrix
+        env:
+          CHUNK_SIZE: 1000
+        run: |
+          CHUNK_SIZE=$CHUNK_SIZE
+          echo "🔢 Using CHUNK_SIZE=$CHUNK_SIZE"
+          python stocks/split_stocks.py --input stocks/stocks.json --chunk-size "$CHUNK_SIZE"
+          echo "🔁 Reading chunk IDs from file..."
+          echo "matrix=$(jq -c . < chunk_ids.json)" >> $GITHUB_OUTPUT
+
+      - name: Upload Chunks
+        uses: actions/upload-artifact@v4
+        with:
+          name: chunk-files
+          path: chunks/
+          
+  debug-matrix:
+    needs: split-stocks
+    if: ${{ github.event.inputs.enable_debug_mode == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Display Generated Matrix
+        run: |
+          echo "🪪 Matrix output from split-stocks"
+          echo "${{ needs.split-stocks.outputs.matrix }}"
+
+  run-fetch:
+    needs: split-stocks
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        chunk_id: ${{ fromJson(needs.split-stocks.outputs.matrix) }}
+      fail-fast: true
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -21,19 +74,67 @@ jobs:
         run: |
           pip install -r stocks/requirements.txt
 
-      - name: Run Export
-        run: |
-          python stocks/export_all_stocks.py --input stocks/stocks.json
+      - name: Download Chunk
+        uses: actions/download-artifact@v4
+        with:
+          name: chunk-files
+          path: ./chunks
 
-      - name: Upload Artifact
+      - name: Run Export
+        env:
+          MAX_WORKERS: 10
+        run: |
+          echo "🚀 Running for chunk ID: ${{ matrix.chunk_id }}"
+          python stocks/export_all_stocks.py --chunk-id ${{ matrix.chunk_id }} --max-workers $MAX_WORKERS
+
+      - name: Upload JSON Artifact
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: stock-${{ github.job }}-${{ strategy.job-index }}
-          path: output/all.json
+          path: output/*.json
+
+      - name: Check "error.log" Exists
+        id: check_error
+        run: |
+          if [ -f error.log ]; then
+            echo "found=true" >> $GITHUB_OUTPUT
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload Error Artifact
+        if: ${{ steps.check_error.outputs.found == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: error-${{ github.job }}-${{ strategy.job-index }}
+          path: error.log
+
+  merge:
+    needs: run-fetch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Download All Chunks
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Merge Chunks
+        run: |
+          python stocks/merge_all_stocks.py --input-dir artifacts
+
+      - name: Upload JSON Artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stock-${{ github.job }}-${{ strategy.job-index }}
+          path: output/*.json
 
   collect-and-push:
-    needs: run-fetch
+    needs: merge
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -44,7 +145,7 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Download All Artifacts
+      - name: Download Artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts

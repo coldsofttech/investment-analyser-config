@@ -2,6 +2,9 @@ import argparse
 import concurrent
 import json
 import os
+import random
+import time
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 
 import yfinance as yf
@@ -11,6 +14,8 @@ import stock_utils
 
 
 def fetch_ticker_data(ticker):
+    time.sleep(random.uniform(0.1, 0.5))
+
     try:
         print(f"📥 Fetching data for {ticker}...")
         yf_ticker = yf.Ticker(ticker)
@@ -41,7 +46,7 @@ def fetch_ticker_data(ticker):
             "dividendYield": stock_utils.safe_get(info, "dividendYield", ""),
             "dividendFrequency": stock_utils.calculate_dividend_frequency(valid_div_data),
             "website": stock_utils.safe_get(info, "website", ""),
-            "companyDescription": stock_utils.safe_get(info, "longBusinessSummary", ""),
+            # "companyDescription": stock_utils.safe_get(info, "longBusinessSummary", ""),
             "currentPrice": float(stock_utils.safe_get(info, "currentPrice", csv_data.iloc[-1][price_col]))
         }
 
@@ -81,16 +86,13 @@ def export_ticker_data(tickers, output_dir="output", error_log="error.log", max_
             ticker = futures[future]
             try:
                 data = future.result()
-                # if "error" in data:
-                #     errors[data["ticker"]] = data["error"]
-                # else:
                 results.append(data)
             except Exception as e:
-                # ticker = futures[future]
-                errors[ticker] = str(e)
+                error_msg = stock_utils.get_root_error_message(e)
+                errors[ticker] = error_msg
 
-    all_path = os.path.join(output_dir, "all.json")
-    with open(all_path, "w") as jf:
+    output_path = os.path.join(output_dir, f"ticker_{str(uuid.uuid4())}.json")
+    with open(output_path, "w") as jf:
         json.dump(results, jf, indent=4, sort_keys=True)
 
     if errors:
@@ -98,7 +100,7 @@ def export_ticker_data(tickers, output_dir="output", error_log="error.log", max_
             for tkr, err in errors.items():
                 ef.write(f"{tkr}: {err}\n")
 
-    print(f"\n✅ Exported {len(results)} tickers to {all_path}")
+    print(f"\n✅ Exported {len(results)} tickers to {output_path}")
     if errors:
         print(f"⚠️ {len(errors)} errors logged to {error_log}")
 
@@ -106,20 +108,25 @@ def export_ticker_data(tickers, output_dir="output", error_log="error.log", max_
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Fetch high-level stock/ETF data using yfinance.")
     parser.add_argument(
-        "--input",
+        "--chunk-id",
         required=True,
-        type=str,
-        help="Path of the input JSON file. JSON file should be a list of tickers."
+        type=int,
+        help="Id of the chunk file to process."
     )
     parser.add_argument(
         "--max-workers",
-        default=10,
+        default=20,
         type=int,
         help="Maximum number of parallel threads."
     )
     args = parser.parse_args()
+    chunk_file = os.path.join("chunks", f"chunk_{args.chunk_id}.json")
+    with open(chunk_file, "r") as c_file:
+        tickers_raw = json.load(c_file)
 
-    with open(args.input, "r") as f:
-        ticker_list = json.load(f)
-
+    ticker_list = [
+        t.strip().upper()
+        for t in tickers_raw
+        if t.strip()
+    ]
     export_ticker_data(ticker_list, max_workers=args.max_workers)
