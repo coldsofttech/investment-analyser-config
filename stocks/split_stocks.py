@@ -3,7 +3,8 @@ import json
 import os
 
 
-def split_tickers(input_file, chunk_size, output_dir="chunks"):
+def split_tickers(input_file, preferred_chunk_size, max_chunks=256, output_dir="chunks"):
+    #  max_chunks is to align with GitHub Actions
     os.makedirs(output_dir, exist_ok=True)
 
     with open(input_file, "r") as in_file:
@@ -17,10 +18,20 @@ def split_tickers(input_file, chunk_size, output_dir="chunks"):
             seen.add(ticker)
             unique_tickers.append(ticker)
 
+    total_tickers = len(unique_tickers)
+    chunk_size = preferred_chunk_size
+    num_chunks = (total_tickers + chunk_size - 1) // chunk_size
+    if num_chunks > max_chunks:
+        chunk_size = (total_tickers + max_chunks - 1) // max_chunks
+        num_chunks = (total_tickers + chunk_size - 1) // chunk_size
+        print(f"⚠️ Too many chunks ({num_chunks}) for preferred chunk size {preferred_chunk_size}.")
+        print(f"➡️ Increasing chunk size to {chunk_size} to keep chunks <= {max_chunks}.")
+
     chunks = [
         unique_tickers[i:i + chunk_size]
         for i in range(0, len(unique_tickers), chunk_size)
     ]
+    
     for idx, chunk in enumerate(chunks):
         output_file_path = os.path.join(output_dir, f"chunk_{idx + 1}.json")
         with open(output_file_path, "w") as out_file:
