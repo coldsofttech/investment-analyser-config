@@ -177,6 +177,7 @@ cython_debug/
 /stocks/output
 /stocks/*.log
 /stocks/chunks
+/stocks/chunk_ids.json
 
 # FX Rates
 /fxrates/output
