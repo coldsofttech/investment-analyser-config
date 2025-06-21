@@ -21,6 +21,16 @@ def accept_all(driver):
     print(f"✅ Accept All button clicked.")
 
 
+def create_screener(driver):
+    wait = get_waiter(driver, 10)
+    print(f"⏳ Awaiting for 'Create' button")
+    create_button = wait.until(EC.element_to_be_clickable(
+        (By.XPATH, '//*[@id="nimbus-app"]/section/section/section/article/section/div[1]/div[1]/button')
+    ))
+    create_button.click()
+    print(f"✅ Create button clicked.")
+
+
 def export_tickers(
         country,
         ticker_type="EQUITY",
@@ -36,6 +46,7 @@ def export_tickers(
     driver = webdriver.Chrome(options=chrome_options)
     driver.get(url)
     accept_all(driver)
+    create_screener(driver)
     input()
 
 
