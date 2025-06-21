@@ -31,7 +31,7 @@ def split_tickers(input_file, preferred_chunk_size, max_chunks=256, output_dir="
         unique_tickers[i:i + chunk_size]
         for i in range(0, len(unique_tickers), chunk_size)
     ]
-    
+
     for idx, chunk in enumerate(chunks):
         output_file_path = os.path.join(output_dir, f"chunk_{idx + 1}.json")
         with open(output_file_path, "w") as out_file:
