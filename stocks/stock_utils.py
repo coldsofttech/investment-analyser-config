@@ -24,10 +24,18 @@ def fetch_history(ticker_obj, period='max'):
 
 @retry(stop=stop_after_attempt(5), wait=wait_random_exponential(min=2, max=5))
 def fetch_info(ticker_obj):
-    info = ticker_obj.info
-    if not info or len(info) < 5:
-        print(f"🔁 Retrying with scrape=True for {ticker_obj.ticker}")
-        info = ticker_obj.get_info(scrape=True)
+    info = None
+    try:
+        info = ticker_obj.info
+        if not info or len(info) < 5:
+            print(f"🔁 Retrying by forcing re-fetch for {ticker_obj.ticker}")
+            info = ticker_obj.info
+    except TypeError as e:
+        if "scrape" in str(e):
+            print(f"⚠️ Ignoring removed 'scrape' call for {ticker_obj.ticker}")
+        else:
+            raise
+
     if not info or len(info) < 5:
         raise ValueError(f"_fetch_info failed for {ticker_obj.ticker}: info is empty or invalid")
     return info
