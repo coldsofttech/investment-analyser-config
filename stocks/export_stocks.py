@@ -114,7 +114,8 @@ def export_ticker_data(tickers, output_dir="output", error_log="error.log", max_
                 future.result()
                 results.append(ticker)
             except Exception as e:
-                errors[ticker] = str(e)
+                error_msg = stock_utils.get_root_error_message(e)
+                errors[ticker] = error_msg
 
     if errors:
         with open(error_log, "w") as ef:
