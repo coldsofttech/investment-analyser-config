@@ -66,7 +66,7 @@ def select_country(driver, country):
 
 def select_exchange(driver, exchange):
     wait = get_waiter(driver, 10)
-    print(f"⏳ Awaiting for 'Region' dropdown")
+    print(f"⏳ Awaiting for 'Exchange' dropdown")
     exchange_button = wait.until(EC.element_to_be_clickable(
         (By.XPATH, '//button[contains(@class, "menuBtn") and .//div[text()="Exchange"]]')
     ))
@@ -129,7 +129,7 @@ def export_table(driver):
     wait = get_waiter(driver, 10)
     last_seen_first_ticker = None
     page_number = 0
-    rows_per_age = get_rows_per_page(driver)
+    # rows_per_age = get_rows_per_page(driver)
     total_rows = get_total_rows(driver)
 
     while True:
@@ -218,6 +218,8 @@ def export_tickers(
         accept_all(driver)
         select_exchange(driver, country)
         results = export_table(driver)
+    else:
+        return
 
     if results:
         with open(file_name, "w") as eq_file:
@@ -234,7 +236,10 @@ if __name__ == "__main__":
         "--country",
         required=True,
         type=str,
-        help="Name of the Country. For example, United States, United Kingdom, etc. For ETF & MUTUALFUND, please provide Exchange instead of Country"
+        help=(
+            "Name of the Country. For example, United States, United Kingdom, etc. "
+            "For ETF, please provide Exchange instead of Country"
+        )
     )
     parser.add_argument(
         "--type",
