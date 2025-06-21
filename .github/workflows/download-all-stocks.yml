@@ -60,6 +60,7 @@ jobs:
     strategy:
       matrix:
         chunk_id: ${{ fromJson(needs.split-stocks.outputs.matrix) }}
+      fail-fast: true
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -81,7 +82,7 @@ jobs:
 
       - name: Run Export
         env:
-          MAX_WORKERS: 50
+          MAX_WORKERS: 20
         run: |
           echo "🚀 Running for chunk ID: ${{ matrix.chunk_id }}"
           python stocks/export_all_stocks.py --chunk-id ${{ matrix.chunk_id }} --max-workers $MAX_WORKERS
