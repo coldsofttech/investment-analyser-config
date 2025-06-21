@@ -157,7 +157,7 @@ jobs:
           mkdir -p $WORKDIR/docs/tickers
 
           echo "📂 Copying output files..."
-          cp -f artifacts/**/*.json $WORKDIR/docs/tickers/
+          find artifacts -type f -name '*.json' ! -name 'chunk_*.json' -exec cp {} $WORKDIR/docs/tickers/ \;
 
           cd $WORKDIR
           if git status --porcelain | grep .; then
