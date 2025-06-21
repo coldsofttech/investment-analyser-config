@@ -31,7 +31,7 @@ jobs:
           echo "🔢 Using CHUNK_SIZE=$CHUNK_SIZE"
           python stocks/split_stocks.py --input stocks/stocks.json --chunk-size "$CHUNK_SIZE"
           echo "🔁 Reading chunk IDs from file..."
-          echo "matrix=$(cat chunk_ids.json)" >> $GITHUB_OUTPUT
+          echo "matrix=$(jq -c . < chunk_ids.json)" >> $GITHUB_OUTPUT
 
   run-fetch:
     needs: split-stocks
