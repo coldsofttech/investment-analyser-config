@@ -2,6 +2,11 @@ name: Download all.json (Tickers Dropdown)
 
 on:
   workflow_dispatch:
+    inputs:
+      enable_debug_mode:
+        description: 'Run debug-matrix job?'
+        required: false
+        default: false
   schedule:
     - cron: '30 0 * * 6'  # Every Saturday at 12:30 AM UTC
 
@@ -25,7 +30,7 @@ jobs:
       - name: Generate Matrix Chunks
         id: gen_matrix
         env:
-          CHUNK_SIZE: 40
+          CHUNK_SIZE: 1000
         run: |
           CHUNK_SIZE=$CHUNK_SIZE
           echo "🔢 Using CHUNK_SIZE=$CHUNK_SIZE"
@@ -41,6 +46,7 @@ jobs:
           
   debug-matrix:
     needs: split-stocks
+    if: ${{ github.event.inputs.enable_debug_mode == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Display Generated Matrix
@@ -75,7 +81,7 @@ jobs:
 
       - name: Run Export
         env:
-          MAX_WORKERS: 20
+          MAX_WORKERS: 50
         run: |
           echo "🚀 Running for chunk ID: ${{ matrix.chunk_id }}"
           python stocks/export_all_stocks.py --chunk-id ${{ matrix.chunk_id }} --max-workers $MAX_WORKERS
@@ -87,7 +93,17 @@ jobs:
           name: stock-${{ github.job }}-${{ strategy.job-index }}
           path: output/*.json
 
+      - name: Check "error.log" Exists
+        id: check_error
+        run: |
+          if [ -f error.log ]; then
+            echo "found=true" >> $GITHUB_OUTPUT
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Upload Error Artifact
+        if: ${{ steps.check_error.outputs.found == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: error-${{ github.job }}-${{ strategy.job-index }}
@@ -107,7 +123,7 @@ jobs:
 
       - name: Merge Chunks
         run: |
-          python stocks/merge_all_stocks.py --input-dir artifacts --output output/all.json
+          python stocks/merge_all_stocks.py --input-dir artifacts
 
       - name: Upload JSON Artifact
         if: success()
