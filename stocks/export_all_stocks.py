@@ -117,11 +117,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
     chunk_file = os.path.join("chunks", f"chunk_{args.chunk_id}.json")
     with open(chunk_file, "r") as c_file:
-        tickers = json.load(c_file)
+        tickers_raw = json.load(c_file)
 
     ticker_list = [
         t.strip().upper()
-        for t in tickers.split(",")
+        for t in tickers_raw
         if t.strip()
     ]
     export_ticker_data(ticker_list, max_workers=args.max_workers)
