@@ -29,26 +29,16 @@ jobs:
         run: |
           CHUNK_SIZE=$CHUNK_SIZE
           echo "🔢 Using CHUNK_SIZE=$CHUNK_SIZE"
-          MATRIX=$(python stocks/split_stocks.py stocks/stocks.json "$CHUNK_SIZE" | jq -c .)
-          echo "⬇️ Matrix: $MATRIX"
-          echo "$MATRIX"
-          ENCODED_MATRIX=$(echo "$MATRIX" | base64 -w 0)
-          echo "matrix=$ENCODED_MATRIX" >> $GITHUB_OUTPUT
-
-      - name: Generated Matrix
-        run: |
-          echo "🔁 Generated matrix"
-          echo '${{ toJson(steps.gen_matrix.outputs.matrix) }}'
-          
-      - name: Debug Matrix
-        run: |
-          echo "🔍 Matrix from needs: ${{ needs.split-stocks.outputs.matrix }}"
+          python stocks/split_stocks.py --input stocks/stocks.json --chunk-size "$CHUNK_SIZE"
+          echo "🔁 Reading chunk IDs from file..."
+          echo "matrix=$(cat chunk_ids.json)" >> $GITHUB_OUTPUT
 
   run-fetch:
     needs: split-stocks
     runs-on: ubuntu-latest
     strategy:
-      matrix: ${{ fromJson(fromBase64(needs.split-stocks.outputs.matrix)) }}
+      matrix:
+        chunk_id: ${{ fromJson(needs.split-stocks.outputs.matrix) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -63,8 +53,11 @@ jobs:
           pip install -r stocks/requirements.txt
 
       - name: Run Export
+        env:
+          MAX_WORKERS: 20
         run: |
-          python stocks/export_all_stocks.py --tickers "${{ join(matrix.chunk, ',') }}"
+          echo "🚀 Running for chunk ID: ${{ matrix.chunk_id }}"
+          python stocks/export_all_stocks.py --chunk-id ${{ matrix.chunk_id }} --max-workers $MAX_WORKERS
 
       - name: Upload JSON Artifact
         if: success()
