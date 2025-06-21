@@ -22,7 +22,6 @@ def fetch_history(ticker_obj, period='max'):
 
 @retry(stop=stop_after_attempt(5), wait=wait_random_exponential(min=2, max=5))
 def fetch_info(ticker_obj):
-    info = None
     try:
         info = ticker_obj.info
         if not info or len(info) < 5:
