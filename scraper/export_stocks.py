@@ -31,33 +31,6 @@ def create_screener(driver):
     print(f"✅ Create button clicked.")
 
 
-def select_ticker_type(driver, ticker_type):
-    wait = get_waiter(driver, 10)
-    print(f"⏳ Awaiting for 'Create a New Screener' popup")
-    wait.until(EC.presence_of_element_located(
-        (By.XPATH, '//*[@id="nimbus-app"]/section/section/section/article/section/div[1]/div[1]/div[2]/dialog/section/div[2]/div/div')
-    ))
-    card_elements = driver.find_elements(
-        By.XPATH, '//*[@id="nimbus-app"]/section/section/section/article/section/div[1]/div[1]/div[2]/dialog/section/div[2]/div/div'
-    )
-
-    for card in card_elements:
-        try:
-            title_element = card.find_element(
-                By.XPATH, './/div[contains(@class, "title")]'
-            )
-            title = title_element.text.strip()
-            if title.lower() == ticker_type.lower():
-                link_element = card.find_element(By.XPATH, './/a')
-                driver.execute_script("arguments[0].click();", link_element)
-                print(f"✅ {ticker_type} card clicked.")
-                return
-        except Exception as e:
-            print(f"⚠️ Could not read card: {e}")
-
-    raise Exception(f"❌ No ticker type card matched: {ticker_type}")
-
-
 def export_tickers(
         country,
         ticker_type="EQUITY",
@@ -71,10 +44,12 @@ def export_tickers(
     chrome_options.add_experimental_option('useAutomationExtension', False)
 
     driver = webdriver.Chrome(options=chrome_options)
+    if ticker_type == "EQUITY":
+        url = "https://finance.yahoo.com/research-hub/screener/equity/"
+
     driver.get(url)
     accept_all(driver)
-    create_screener(driver)
-    select_ticker_type(driver, ticker_type)
+    # create_screener(driver)
     input()
 
 
