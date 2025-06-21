@@ -47,7 +47,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        chunk_id: ${{ fromJson(needs.split-stocks.outputs.matrix) }}
+        chunk_id: ${{ needs.split-stocks.outputs.matrix }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
