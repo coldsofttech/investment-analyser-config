@@ -8,13 +8,11 @@ from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 @retry(stop=stop_after_attempt(5), wait=wait_random_exponential(min=2, max=5))
 def fetch_history(ticker_obj, period='max'):
-    data = None
+    data = ticker_obj.history(period=period)
 
-    try:
-        data = ticker_obj.history(period=period)
-    except Exception as e:
-        if "Period 'max' is invalid" in str(e):
-            data = ticker_obj.history(period='20y')
+    if data.empty and period == 'max':
+        print(f"⚠️ 'max' period returned no data for {ticker_obj.ticker}, retrying with '20y'")
+        data = ticker_obj.history(period='20y')
 
     if data.empty:
         raise ValueError(f"No historical data found for ticker.")
