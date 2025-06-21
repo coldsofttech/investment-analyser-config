@@ -64,10 +64,44 @@ def select_country(driver, country):
     print(f"✅ Apply button clicked.")
 
 
+def select_exchange(driver, exchange):
+    wait = get_waiter(driver, 10)
+    print(f"⏳ Awaiting for 'Region' dropdown")
+    exchange_button = wait.until(EC.element_to_be_clickable(
+        (By.XPATH, '//button[contains(@class, "menuBtn") and .//div[text()="Exchange"]]')
+    ))
+    exchange_button.click()
+    print(f"✅ Exchange dropdown clicked.")
+    wait.until(EC.presence_of_element_located(
+        (By.XPATH, '//div[contains(@class, "dialog-container")]')
+    ))
+    print(f"⏳ Awaiting for 'Reset' button")
+    reset_button = wait.until(EC.element_to_be_clickable(
+        (By.XPATH, '//div[contains(@class, "reset")]//button')
+    ))
+    reset_button.click()
+    print(f"✅ Reset button clicked.")
+    exchange_checkbox = wait.until(EC.presence_of_element_located(
+        (By.XPATH,
+         f'//div[contains(@class, "options")]//label[contains(@class, "input") and @title="{exchange}"]//input[@type="checkbox"]')
+    ))
+    if not exchange_checkbox.is_selected():
+        exchange_checkbox.click()
+        print(f"✅ {exchange} option selected.")
+    else:
+        print(f"✅ {exchange} option already selected.")
+    apply_button = wait.until(EC.element_to_be_clickable(
+        (By.XPATH, '//div[contains(@class, "submit")]//button')
+    ))
+    apply_button.click()
+    print(f"✅ Apply button clicked.")
+
+
 def get_rows_per_page(driver):
     wait = get_waiter(driver)
     pagination_dropdown = wait.until(EC.presence_of_element_located(
-        (By.XPATH, '//div[contains(@class, "screener-table")]//div[contains(@class, "paginationContainer")]//div[contains(@class, "container")]//span[contains(@class, "textSelect")]')
+        (By.XPATH,
+         '//div[contains(@class, "screener-table")]//div[contains(@class, "paginationContainer")]//div[contains(@class, "container")]//span[contains(@class, "textSelect")]')
     ))
     rows = pagination_dropdown.text.strip()
 
@@ -90,7 +124,7 @@ def get_total_rows(driver):
     return rows
 
 
-def export_equity(driver):
+def export_table(driver):
     tickers = []
     wait = get_waiter(driver, 10)
     last_seen_first_ticker = None
@@ -158,7 +192,8 @@ def export_equity(driver):
 def export_tickers(
         country,
         ticker_type="EQUITY",
-        disable_headless=False
+        disable_headless=False,
+        url="https://finance.yahoo.com/research-hub/screener/"
 ):
     chrome_options = Options()
     if not disable_headless:
@@ -170,16 +205,23 @@ def export_tickers(
 
     driver = webdriver.Chrome(options=chrome_options)
     file_name = f"{ticker_type}_{country}.json"
+    results = []
     if ticker_type == "EQUITY":
-        url = "https://finance.yahoo.com/research-hub/screener/equity/"
+        url += "equity/"
         driver.get(url)
         accept_all(driver)
         select_country(driver, country)
-        equities = export_equity(driver)
+        results = export_table(driver)
+    elif ticker_type == "ETF":
+        url += "etf/"
+        driver.get(url)
+        accept_all(driver)
+        select_exchange(driver, country)
+        results = export_table(driver)
 
+    if results:
         with open(file_name, "w") as eq_file:
-            json.dump(equities, eq_file, indent=4, sort_keys=True)
-
+            json.dump(results, eq_file, indent=4, sort_keys=True)
         print(f"✅ Exported to {file_name}")
 
     input()
@@ -192,7 +234,7 @@ if __name__ == "__main__":
         "--country",
         required=True,
         type=str,
-        help="Name of the Country. For example, United States, United Kingdom, etc."
+        help="Name of the Country. For example, United States, United Kingdom, etc. For ETF & MUTUALFUND, please provide Exchange instead of Country"
     )
     parser.add_argument(
         "--type",
