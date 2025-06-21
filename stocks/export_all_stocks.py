@@ -2,6 +2,8 @@ import argparse
 import concurrent
 import json
 import os
+import random
+import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 
@@ -12,6 +14,8 @@ import stock_utils
 
 
 def fetch_ticker_data(ticker):
+    time.sleep(random.uniform(0.1, 0.5))
+
     try:
         print(f"📥 Fetching data for {ticker}...")
         yf_ticker = yf.Ticker(ticker)
@@ -42,7 +46,7 @@ def fetch_ticker_data(ticker):
             "dividendYield": stock_utils.safe_get(info, "dividendYield", ""),
             "dividendFrequency": stock_utils.calculate_dividend_frequency(valid_div_data),
             "website": stock_utils.safe_get(info, "website", ""),
-            "companyDescription": stock_utils.safe_get(info, "longBusinessSummary", ""),
+            # "companyDescription": stock_utils.safe_get(info, "longBusinessSummary", ""),
             "currentPrice": float(stock_utils.safe_get(info, "currentPrice", csv_data.iloc[-1][price_col]))
         }
 
