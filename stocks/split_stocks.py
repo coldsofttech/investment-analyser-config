@@ -1,7 +1,6 @@
 import argparse
 import json
 import os
-import uuid
 
 
 def split_tickers(input_file, chunk_size, output_dir="chunks"):
@@ -23,13 +22,17 @@ def split_tickers(input_file, chunk_size, output_dir="chunks"):
         for i in range(0, len(unique_tickers), chunk_size)
     ]
     for idx, chunk in enumerate(chunks):
-        output_file_path = os.path.join(output_dir, f"chunk_{uuid.uuid4()}.json")
+        output_file_path = os.path.join(output_dir, f"chunk_{idx + 1}.json")
         with open(output_file_path, "w") as out_file:
             json.dump(chunk, out_file, indent=4, sort_keys=True)
 
         print(f"✅ Saved chunk {idx + 1} with {len(chunk)} tickers to {output_file_path}.")
 
     print("✅ Processed all tickers.")
+
+    chunk_ids = list(range(1, len(chunks) + 1))
+    with open("chunk_ids.json", "w") as c_file:
+        json.dump(chunk_ids, c_file)
 
 
 if __name__ == "__main__":
