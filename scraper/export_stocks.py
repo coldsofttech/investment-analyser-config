@@ -158,10 +158,11 @@ def export_equity(driver):
 def export_tickers(
         country,
         ticker_type="EQUITY",
-        url="https://finance.yahoo.com/research-hub/screener/"
+        disable_headless=False
 ):
     chrome_options = Options()
-    # chrome_options.add_argument("--headless=new")
+    if not disable_headless:
+        chrome_options.add_argument("--headless=new")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_experimental_option("excludeSwitches", ["enable-logging", "enable-automation"])
@@ -200,5 +201,10 @@ if __name__ == "__main__":
         type=str,
         help="Ticker Type. For example, EQUITY, ETF, etc."
     )
+    parser.add_argument(
+        "--disable-headless",
+        action="store_true",
+        help="True or False for headless Chrome"
+    )
     args = parser.parse_args()
-    export_tickers(args.country, args.type)
+    export_tickers(args.country, args.type, args.disable_headless)
