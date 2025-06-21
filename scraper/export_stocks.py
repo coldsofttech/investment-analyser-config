@@ -15,7 +15,7 @@ def accept_all(driver):
     wait = get_waiter(driver, 10)
     print(f"⏳ Awaiting for 'Accept All' button")
     accept_all_button = wait.until(EC.element_to_be_clickable(
-        (By.XPATH, '//*[@id="consent-page"]/div/div/div/form/div[2]/div[2]/button[1]')
+        (By.XPATH, '//*[@id="consent-page"]//button[text()="Accept all"]')
     ))
     accept_all_button.click()
     print(f"✅ Accept All button clicked.")
