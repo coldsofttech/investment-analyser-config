@@ -112,6 +112,7 @@ def export_ticker_data(tickers, output_dir="output", error_log="error.log", max_
             ticker = futures[future]
             try:
                 future.result()
+                results.append(ticker)
             except Exception as e:
                 errors[ticker] = str(e)
 
