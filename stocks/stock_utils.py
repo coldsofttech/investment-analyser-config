@@ -26,7 +26,7 @@ def fetch_info(ticker_obj):
         info = ticker_obj.info
         if not info or len(info) < 5:
             print(f"🔁 Retrying by forcing re-fetch for {ticker_obj.ticker}")
-            info = ticker_obj.info
+            info = ticker_obj.get_info(scrape=True)
     except TypeError as e:
         if "scrape" in str(e):
             print(f"⚠️ Ignoring removed 'scrape' call for {ticker_obj.ticker}")
