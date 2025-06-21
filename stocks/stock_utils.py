@@ -204,3 +204,23 @@ def calculate_short_and_long_term_cagr(data, price_col, today=None):
         "shortTermCagr": combine(["1y", "2y"]),
         "longTermCagr": combine(["5y", "10y", "15y", "20y"])
     }
+
+
+def get_root_error_message(exc):
+    current = exc
+    last_message = str(current)
+
+    while True:
+        cause = getattr(current, "__cause__", None)
+        context = getattr(current, "__context__", None)
+
+        if cause is not None:
+            last_message = str(cause)
+            current = cause
+        elif context is not None:
+            last_message = str(context)
+            current = context
+        else:
+            break
+
+    return last_message

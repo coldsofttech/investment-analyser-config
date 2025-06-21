@@ -84,7 +84,8 @@ def export_ticker_data(tickers, output_dir="output", error_log="error.log", max_
                 data = future.result()
                 results.append(data)
             except Exception as e:
-                errors[ticker] = str(e)
+                error_msg = stock_utils.get_root_error_message(e)
+                errors[ticker] = error_msg
 
     output_path = os.path.join(output_dir, f"ticker_{str(uuid.uuid4())}.json")
     with open(output_path, "w") as jf:
