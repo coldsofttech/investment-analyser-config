@@ -2,6 +2,8 @@ import argparse
 import concurrent
 import json
 import os
+import random
+import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 
@@ -16,6 +18,7 @@ def export_ticker(tickers, output_dir="output", error_log="error.log", max_worke
     results = []
     errors = {}
 
+    time.sleep(random.uniform(5, 20))
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {executor.submit(StockFetcher.fetch_ticker, ticker): ticker for ticker in tickers}
 
