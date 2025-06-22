@@ -1,4 +1,5 @@
 import json
+import math
 import os
 import random
 import time
@@ -111,6 +112,16 @@ class StockFetcher:
             return default
 
     @staticmethod
+    def safe_float(val, default=0.0):
+        try:
+            val = float(val)
+            if math.isnan(val) or math.isinf(val):
+                return default
+            return val
+        except:
+            return default
+
+    @staticmethod
     def fetch_ticker(ticker, attempt=0):
         time.sleep(random.uniform(0.1, 0.5) * attempt)
         try:
@@ -139,17 +150,17 @@ class StockFetcher:
                 "country": StockFetcher.safe_get(info, "region", ""),
                 "currency": StockFetcher.safe_get(info, "currency", ""),
                 "beta": StockFetcher.safe_get(info, "beta", ""),
-                "volatility": StockCalculator.calculate_volatility(raw_data.copy(), price_col),
-                "dividendYield": StockFetcher.safe_get(info, "dividendYield", ""),
+                "volatility": StockFetcher.safe_float(StockCalculator.calculate_volatility(raw_data.copy(), price_col)),
+                "dividendYield": StockFetcher.safe_float(StockFetcher.safe_get(info, "dividendYield", "")),
                 "dividendFrequency": StockCalculator.calculate_dividend_frequency(valid_div_data),
                 "website": StockFetcher.safe_get(info, "website", ""),
-                "currentPrice": float(StockFetcher.safe_get(info, "currentPrice", csv_data.iloc[-1][price_col])),
+                "currentPrice": StockFetcher.safe_float(StockFetcher.safe_get(info, "currentPrice", csv_data.iloc[-1][price_col])),
                 "isDowngrading": StockUtils.is_downgrading(valid_data, price_col)
             }
 
             historical_cagr = StockCalculator.calculate_historical_short_and_long_term_cagr(valid_data, price_col)
-            result["shortTermCagr"] = historical_cagr.get("shortTermCagr", 0)
-            result["longTermCagr"] = historical_cagr.get("longTermCagr", 0)
+            result["shortTermCagr"] = StockFetcher.safe_float(historical_cagr.get("shortTermCagr", 0))
+            result["longTermCagr"] = StockFetcher.safe_float(historical_cagr.get("longTermCagr", 0))
 
             if ticker_type.lower() == "etf":
                 result["marketCap"] = StockFetcher.safe_get(info, "totalAssets", "")
@@ -208,11 +219,17 @@ class StockFetcher:
                     "currency": StockFetcher.safe_get(info, "currency", ""),
                     "beta": StockFetcher.safe_get(info, "beta", ""),
                     "payoutRatio": StockFetcher.safe_get(info, "payoutRatio", ""),
-                    "dividendYield": StockFetcher.safe_get(info, "dividendYield", ""),
+                    "dividendYield": StockFetcher.safe_float(StockFetcher.safe_get(info, "dividendYield", "")),
                     "dividendFrequency": StockCalculator.calculate_dividend_frequency(valid_div_data),
-                    "volatility": StockCalculator.calculate_volatility(raw_data.copy(), price_col),
-                    "maxDrawdown": StockCalculator.calculate_max_drawdown(csv_data.copy(), price_col),
-                    "sharpeRatio": StockCalculator.calculate_sharpe_ratio(raw_data.copy(), price_col)
+                    "volatility": StockFetcher.safe_float(
+                        StockCalculator.calculate_volatility(raw_data.copy(), price_col)
+                    ),
+                    "maxDrawdown": StockFetcher.safe_float(
+                        StockCalculator.calculate_max_drawdown(csv_data.copy(), price_col)
+                    ),
+                    "sharpeRatio": StockFetcher.safe_float(
+                        StockCalculator.calculate_sharpe_ratio(raw_data.copy(), price_col)
+                    )
                 },
                 "data": [
                     {"date": d.strftime('%Y-%m-%d'), "price": float(p)}
@@ -225,11 +242,13 @@ class StockFetcher:
                 "events": {
                     "dividends": {
                         "date": upcoming_div_date.strftime('%Y-%m-%d') if upcoming_div_date else None,
-                        "price": float(upcoming_div_amount) if upcoming_div_amount else None
+                        "price": StockFetcher.safe_float(upcoming_div_amount) if upcoming_div_amount else None
                     }
                 },
                 "priceInfo": {
-                    "currentPrice": float(StockFetcher.safe_get(info, "currentPrice", csv_data.iloc[-1][price_col]))
+                    "currentPrice": StockFetcher.safe_float(
+                        StockFetcher.safe_get(info, "currentPrice", csv_data.iloc[-1][price_col])
+                    )
                 }
             }
 
