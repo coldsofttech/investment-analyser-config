@@ -73,7 +73,7 @@ class StockCalculator:
         return 'N/A'
 
     @staticmethod
-    def calculate_short_and_long_term_cagr(data, price_col, today=None):
+    def calculate_historical_short_and_long_term_cagr(data, price_col, today=None):
         if data.empty:
             return {
                 "shortTermCagr": None,
