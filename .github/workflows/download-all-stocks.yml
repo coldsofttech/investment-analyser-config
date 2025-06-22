@@ -125,6 +125,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Dependencies
+        run: |
+          pip install -r stocks/requirements.txt
+
       - name: Download All Chunks
         uses: actions/download-artifact@v4
         with:
@@ -132,7 +141,7 @@ jobs:
 
       - name: Merge Chunks
         run: |
-          python stocks/merge_all_stocks.py --input-dir artifacts
+          python stocks/merger.py --input-dir artifacts
 
       - name: Upload JSON Artifact
         if: success()
