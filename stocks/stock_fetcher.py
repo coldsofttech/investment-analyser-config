@@ -33,7 +33,7 @@ class StockFetcher:
         data = ticker_obj.history(period=period)
 
         if data.empty and period == 'max':
-            print(f"⚠️ 'max' period returned no data for {ticker_obj.ticker}, retrying with '20y'")
+            # print(f"⚠️ 'max' period returned no data for {ticker_obj.ticker}, retrying with '20y'")
             data = ticker_obj.history(period='20y')
 
         if data.empty:
@@ -47,7 +47,7 @@ class StockFetcher:
         time.sleep(random.uniform(0.1, 0.5))
         info = ticker_obj.info
         if not info or len(info) < 5:
-            print(f"🔁 Retrying by forcing re-fetch for {ticker_obj.ticker}")
+            # print(f"🔁 Retrying by forcing re-fetch for {ticker_obj.ticker}")
             info = ticker_obj.get_info()
 
         if not info or len(info) < 5:
@@ -114,7 +114,7 @@ class StockFetcher:
     def fetch_ticker(ticker, attempt=0):
         time.sleep(random.uniform(0.1, 0.5) * attempt)
         try:
-            print(f"📥 Fetching data for {ticker}...")
+            # print(f"📥 Fetching data for {ticker}...")
             yf_ticker = yf.Ticker(ticker)
 
             raw_data = StockFetcher.fetch_history(yf_ticker, attempt=attempt)
