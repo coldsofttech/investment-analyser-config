@@ -109,8 +109,6 @@ class StockFetcher:
 
     @staticmethod
     def fetch_ticker(ticker):
-        time.sleep(random.uniform(0.5, 2.5))
-
         try:
             print(f"📥 Fetching data for {ticker}...")
             yf_ticker = yf.Ticker(ticker)
@@ -146,8 +144,8 @@ class StockFetcher:
             }
 
             historical_cagr = StockCalculator.calculate_historical_short_and_long_term_cagr(valid_data, price_col)
-            result["shortTermCagr"] = historical_cagr.get("shortTermCagr", None)
-            result["longTermCagr"] = historical_cagr.get("longTermCagr", None)
+            result["shortTermCagr"] = historical_cagr.get("shortTermCagr", 0)
+            result["longTermCagr"] = historical_cagr.get("longTermCagr", 0)
 
             if ticker_type.lower() == "etf":
                 result["marketCap"] = StockFetcher.safe_get(info, "totalAssets", "")
@@ -162,7 +160,7 @@ class StockFetcher:
 
             return result
         except Exception as e:
-            raise RuntimeError(f"Failed to fetch {ticker}: {str(e)}")
+            return {"error": f"Failed to fetch {ticker}: {str(e)}"}
 
     @staticmethod
     def fetch_ticker_detailed(ticker, output_dir="output"):

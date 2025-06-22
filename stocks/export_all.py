@@ -13,32 +13,40 @@ from stock_fetcher import StockFetcher
 from stock_utils import StockUtils
 
 
-def export_ticker(tickers, output_dir="output", error_log="error.log", max_workers=10):
+def export_ticker(tickers, output_dir="output", error_log="error.log", max_workers=10, max_global_retries=5):
     os.makedirs(output_dir, exist_ok=True)
-    results = []
+    remaining = set(tickers)
+    results = {}
     errors = {}
 
-    time.sleep(random.uniform(5, 20))
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {executor.submit(StockFetcher.fetch_ticker, ticker): ticker for ticker in tickers}
+    for global_attempt in range(1, max_global_retries + 1):
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {executor.submit(StockFetcher.fetch_ticker, t): t for t in remaining}
 
-        for future in tqdm(
+            for future in tqdm(
                 concurrent.futures.as_completed(futures),
-                total=len(tickers),
+                total=len(remaining),
                 desc="Fetching tickers",
                 unit="tickers"
-        ):
-            ticker = futures[future]
-            try:
-                data = future.result()
-                results.append(data)
-            except Exception as e:
-                error_msg = StockUtils.get_root_error_message(e)
-                errors[ticker] = error_msg
+            ):
+                ticker = futures[future]
+                results[ticker] = future.result()
+
+        failed = {
+            t for t, r in results.items()
+            if r.get("error", None) is not None
+        }
+        if not failed:
+            break
+
+        print(f"🔁 Retrying {len(failed)} failed tickers: {failed}")
+        remaining = failed
+        time.sleep(random.uniform(5, 10))
 
     output_path = os.path.join(output_dir, f"ticker_{str(uuid.uuid4())}.json")
+    final_result = list(results.values())
     with open(output_path, "w") as jf:
-        json.dump(results, jf, indent=4, sort_keys=True)
+        json.dump(final_result, jf, indent=4, sort_keys=True)
 
     if errors:
         with open(error_log, "w") as ef:
@@ -64,6 +72,12 @@ if __name__ == "__main__":
         type=int,
         help="Maximum number of parallel threads."
     )
+    parser.add_argument(
+        "--max-global-retries",
+        default=5,
+        type=int,
+        help="Maximum number of global retries. Defaults to 5"
+    )
     args = parser.parse_args()
     chunk_file = os.path.join("chunks", f"chunk_{args.chunk_id}.json")
     with open(chunk_file, "r") as c_file:
@@ -74,4 +88,8 @@ if __name__ == "__main__":
         for t in tickers_raw
         if t.strip()
     ]
-    export_ticker(ticker_list, max_workers=args.max_workers)
+    export_ticker(
+        ticker_list,
+        max_workers=args.max_workers,
+        max_global_retries=args.max_global_retries
+    )
