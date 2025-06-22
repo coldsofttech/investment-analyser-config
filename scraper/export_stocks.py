@@ -1,8 +1,9 @@
 import argparse
 import json
-import random
+import os
 import re
 import time
+from functools import wraps
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -10,248 +11,234 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
+from tqdm import tqdm
 
 
-def get_waiter(driver, timeout=1):
-    return WebDriverWait(driver, timeout)
+def retry(max_retries=5, delay=1.0):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    print(f"⚠️ Warning: {func.__name__} failed: {e} (attempt: {attempt + 1}).")
+                    time.sleep(delay)
+            raise RuntimeError(f"❌ {func.__name__} failed after {max_retries} retries.")
+
+        return wrapper
+
+    return decorator
 
 
-def accept_all(driver):
-    wait = get_waiter(driver, 10)
-    print(f"⏳ Awaiting for 'Accept All' button")
-    accept_all_button = wait.until(EC.element_to_be_clickable(
-        (By.XPATH, '//*[@id="consent-page"]//button[text()="Accept all"]')
-    ))
-    accept_all_button.click()
-    print(f"✅ Accept All button clicked.")
+class ScraperUtils:
+    @staticmethod
+    def retry_click(wait, xpath):
+        @retry(max_retries=5, delay=1)
+        def click():
+            elem = wait.until(EC.element_to_be_clickable((By.XPATH, xpath)))
+            elem.click()
+            return elem
+
+        return click()
+
+    @staticmethod
+    def wait_for_presence(wait, xpath):
+        return wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
+
+    @staticmethod
+    def send_keys_to_element(element, keys):
+        element.clear()
+        element.send_keys(keys)
+        time.sleep(0.3)
+
+    @staticmethod
+    def extract_number_from_text(text, pattern=r'of\s+([\d,]+)'):
+        match = re.search(pattern, text)
+        return int(match.group(1).replace(',', '')) if match else 0
 
 
-def select_country(driver, country):
-    wait = get_waiter(driver, 10)
-    print(f"⏳ Awaiting for 'Region' dropdown")
-    region_button = wait.until(EC.element_to_be_clickable(
-        (By.XPATH, '//button[contains(@class, "menuBtn") and .//div[text()="Region"]]')
-    ))
-    region_button.click()
-    print(f"✅ Region dropdown clicked.")
-    wait.until(EC.presence_of_element_located(
-        (By.XPATH, '//div[contains(@class, "dialog-container")]')
-    ))
-    print(f"⏳ Awaiting for 'Reset' button")
-    reset_button = wait.until(EC.element_to_be_clickable(
-        (By.XPATH, '//div[contains(@class, "reset")]//button')
-    ))
-    reset_button.click()
-    print(f"✅ Reset button clicked.")
-    search_text = wait.until(EC.presence_of_element_located(
-        (By.XPATH, '//div[contains(@class, "search")]//input[@placeholder="Search..."]')
-    ))
-    search_text.send_keys(country)
-    search_text.send_keys(Keys.ENTER)
-    country_checkbox = wait.until(EC.presence_of_element_located(
-        (By.XPATH,
-         f'//div[contains(@class, "options")]//label[contains(@class, "input") and @title="{country}"]//input[@type="checkbox"]')
-    ))
-    if not country_checkbox.is_selected():
-        country_checkbox.click()
-        print(f"✅ {country} option selected.")
-    else:
-        print(f"✅ {country} option already selected.")
-    apply_button = wait.until(EC.element_to_be_clickable(
-        (By.XPATH, '//div[contains(@class, "submit")]//button')
-    ))
-    apply_button.click()
-    print(f"✅ Apply button clicked.")
+class Scraper:
+    def __init__(self, ticker_type, region, headless=True):
+        self.ticker_type = ticker_type
+        self.region = region
+        self.driver = self._init_driver(headless)
+        self.wait = WebDriverWait(self.driver, 10)
+        self.base_url = f"https://finance.yahoo.com/research-hub/screener/{self.ticker_type.lower()}/"
 
+    def _init_driver(self, headless):
+        options = Options()
+        if headless:
+            options.add_argument("--headless=new")
+        options.add_argument("--disable-gpu")
+        options.add_argument("--no-sandbox")
+        options.add_experimental_option("excludeSwitches", ["enable-logging", "enable-automation"])
+        options.add_experimental_option('useAutomationExtension', False)
+        print("🚀 Launching Chrome browser...")
+        return webdriver.Chrome(options=options)
 
-def select_exchange(driver, exchange):
-    wait = get_waiter(driver, 10)
-    print(f"⏳ Awaiting for 'Exchange' dropdown")
-    exchange_button = wait.until(EC.element_to_be_clickable(
-        (By.XPATH, '//button[contains(@class, "menuBtn") and .//div[text()="Exchange"]]')
-    ))
-    exchange_button.click()
-    print(f"✅ Exchange dropdown clicked.")
-    wait.until(EC.presence_of_element_located(
-        (By.XPATH, '//div[contains(@class, "dialog-container")]')
-    ))
-    print(f"⏳ Awaiting for 'Reset' button")
-    reset_button = wait.until(EC.element_to_be_clickable(
-        (By.XPATH, '//div[contains(@class, "reset")]//button')
-    ))
-    reset_button.click()
-    print(f"✅ Reset button clicked.")
-    exchange_checkbox = wait.until(EC.presence_of_element_located(
-        (By.XPATH,
-         f'//div[contains(@class, "options")]//label[contains(@class, "input") and @title="{exchange}"]//input[@type="checkbox"]')
-    ))
-    if not exchange_checkbox.is_selected():
-        exchange_checkbox.click()
-        print(f"✅ {exchange} option selected.")
-    else:
-        print(f"✅ {exchange} option already selected.")
-    apply_button = wait.until(EC.element_to_be_clickable(
-        (By.XPATH, '//div[contains(@class, "submit")]//button')
-    ))
-    apply_button.click()
-    print(f"✅ Apply button clicked.")
+    def visit(self):
+        print(f"🌐 Navigating to {self.base_url}")
+        self.driver.get(self.base_url)
+        self._accept_all()
 
-
-def get_rows_per_page(driver):
-    wait = get_waiter(driver)
-    pagination_dropdown = wait.until(EC.presence_of_element_located(
-        (By.XPATH,
-         '//div[contains(@class, "screener-table")]//div[contains(@class, "paginationContainer")]//div[contains(@class, "container")]//span[contains(@class, "textSelect")]')
-    ))
-    rows = pagination_dropdown.text.strip()
-
-    return int(rows)
-
-
-def get_total_rows(driver):
-    wait = get_waiter(driver)
-    pagination_dropdown = wait.until(EC.presence_of_element_located((
-        By.XPATH,
-        '//div[contains(@class, "screener-table")]//div[contains(@class, "paginationContainer")]//div[contains(@class, "total")]'
-    )))
-    pag_text = pagination_dropdown.text.strip()
-    match = re.search(r'of\s+([\d,]+)', pag_text)
-    if match:
-        rows = int(match.group(1).replace(',', ''))
-    else:
-        rows = 0
-
-    return rows
-
-
-def export_table(driver):
-    tickers = []
-    wait = get_waiter(driver, 10)
-    last_seen_first_ticker = None
-    page_number = 0
-    # rows_per_age = get_rows_per_page(driver)
-    total_rows = get_total_rows(driver)
-
-    while True:
-        page_number += 1
-        completion_per = (len(tickers) / total_rows) * 100
-        print(f"ℹ️ Loaded page: {page_number} ({completion_per:.2f} %).")
-        time.sleep(random.uniform(0.1, 0.5))
-        wait.until(EC.presence_of_element_located((
-            By.XPATH,
-            '//div[contains(@class, "screener-table")]//div[contains(@class, "table-container")]//table//tbody'
-        )))
-        equity_table = driver.find_element(
-            By.XPATH,
-            '//div[contains(@class, "screener-table")]//div[contains(@class, "table-container")]//table//tbody'
-        )
-        rows = equity_table.find_elements(By.XPATH, './tr')
-
-        page_tickers = []
-        for i, row in enumerate(rows):
-            try:
-                ticker_element = row.find_element(
-                    By.XPATH,
-                    './/span[contains(@class, "ticker-wrapper")]//a[contains(@class, "ticker")]//span[contains(@class, "symbol")]'
-                )
-                ticker_text = ticker_element.text.strip()
-                if ticker_text:
-                    page_tickers.append(ticker_text)
-            except Exception as e:
-                print(f"⚠️ Skipping row {i} due to error: {e}")
-
-        if not page_tickers:
-            print(f"⚠️ No tickers found on page. Ending.")
-            break
-
-        tickers.extend(page_tickers)
-
+    def _accept_all(self):
+        print("🛡️ Checking for consent dialog...")
         try:
-            next_button = driver.find_element(
-                By.XPATH,
-                '//div[contains(@class, "screener-table")]//div[contains(@class, "paginationContainer")]//div[contains(@class, "buttons")]//button[@aria-label="Goto next page"]'
+            ScraperUtils.retry_click(
+                self.wait, '//*[@id="consent-page"]//button[text()="Accept all"]'
             )
-            if next_button.get_attribute("disabled") is not None:
-                print(f"✅ Last page reached.")
+            print("✅ Consent accepted.")
+        except:
+            print("ℹ️ Consent dialog not found or already accepted.")
+
+    def _select_dropdown_option(self, label, value):
+        print(f"🔍 Selecting '{value}' in dropdown labeled '{label}'...")
+        ScraperUtils.retry_click(
+            self.wait, f'//button[contains(@class, "menuBtn") and .//div[text()="{label}"]]'
+        )
+        ScraperUtils.retry_click(self.wait, '//div[contains(@class, "reset")]//button')
+        search_input = ScraperUtils.wait_for_presence(
+            self.wait, '//input[@placeholder="Search..."]'
+        )
+        ScraperUtils.send_keys_to_element(search_input, value)
+        search_input.send_keys(Keys.ENTER)
+        time.sleep(0.5)
+        checkbox_xpath = f'//label[@title="{value}"]//input[@type="checkbox"]'
+        checkbox = ScraperUtils.wait_for_presence(self.wait, checkbox_xpath)
+        if not checkbox.is_selected():
+            checkbox.click()
+        ScraperUtils.retry_click(self.wait, '//div[contains(@class, "submit")]//button')
+        print(f"✅ Selected '{value}' in '{label}' dropdown.")
+
+    def apply_filters(self):
+        if self.ticker_type == "EQUITY":
+            self._select_dropdown_option("Region", self.region)
+        elif self.ticker_type == "ETF":
+            self._select_dropdown_option("Exchange", self.region)
+        else:
+            print(f"ℹ️ No filters applied for ticker type: {self.ticker_type}")
+
+    def _extract_total_rows(self):
+        total_text_xpath = '//div[contains(@class,"total")]'
+        total_elem = ScraperUtils.wait_for_presence(self.wait, total_text_xpath)
+        total_rows = ScraperUtils.extract_number_from_text(total_elem.text)
+        print(f"🔢 Total rows found: {total_rows}")
+        return total_rows
+
+    @staticmethod
+    @retry(max_retries=5, delay=2)
+    def _click_next_page(driver, prev_first):
+        next_btn = driver.find_element(
+            By.XPATH, '//button[@aria-label="Goto next page"]'
+        )
+        if next_btn.get_attribute("disabled"):
+            raise RuntimeError("⏹️ Next button is disabled.")
+
+        next_btn.click()
+        WebDriverWait(driver, 10).until(
+            EC.staleness_of(driver.find_element(
+                By.XPATH, '//tbody/tr[1]//span[contains(@class, "symbol")]'
+            ))
+        )
+        WebDriverWait(driver, 10).until(lambda d: d.find_element(
+            By.XPATH, '//tbody/tr[1]//span[contains(@class, "symbol")]'
+        ).text.strip() != prev_first)
+
+    def scrape_tickers(self):
+        print("📋 Starting ticker extraction...")
+        tickers = []
+        total_rows = self._extract_total_rows()
+        seen_first = None
+
+        pbar = tqdm(total=total_rows, desc="Scrapping tickers", unit="tickers")
+
+        while True:
+            rows = self.driver.find_elements(By.XPATH, '//table//tbody/tr')
+            if not rows:
+                print("⚠️ No rows found on page, ending scrape.")
                 break
 
-            last_seen_first_ticker = page_tickers[0]
-            next_button.click()
-            wait.until(lambda d: d.find_element(
-                By.XPATH,
-                '//div[contains(@class, "screener-table")]//div[contains(@class, "table-container")]//table//tbody/tr[1]//span[contains(@class, "symbol")]'
-            ).text.strip() != last_seen_first_ticker)
-        except Exception as e:
-            print(f"❌ Pagination error: {e}")
-            break
+            page_tickers = []
+            for row in rows:
+                try:
+                    symbol = row.find_element(
+                        By.XPATH, './/span[contains(@class, "symbol")]'
+                    ).text.strip()
+                    if symbol:
+                        page_tickers.append(symbol)
+                except:
+                    continue
 
-    print(f"\n✅ Total tickers collected: {len(tickers)}")
-    return tickers
+            if not page_tickers:
+                print("⚠️ No tickers found on current page, stopping.")
+                break
+
+            tickers.extend(page_tickers)
+            pbar.update(len(page_tickers))
+
+            if seen_first == page_tickers[0]:
+                print("🏁 First ticker same as previous page, assuming last page reached.")
+                break
+            seen_first = page_tickers[0]
+
+            try:
+                prev_first = self.driver.find_element(
+                    By.XPATH, '//tbody/tr[1]//span[contains(@class, "symbol")]'
+                ).text.strip()
+
+                self._click_next_page(self.driver, prev_first)
+                time.sleep(0.5)
+            except Exception as e:
+                print(f"⚠️ Could not go to next page: {e}")
+                break
+
+        pbar.close()
+        print(f"🎉 Finished scraping. Total tickers extracted: {len(tickers)}")
+        return tickers
+
+    def run(self):
+        try:
+            self.visit()
+            self.apply_filters()
+            return self.scrape_tickers()
+        finally:
+            print("🧹 Closing browser...")
+            self.driver.quit()
 
 
-def export_tickers(
-        country,
-        ticker_type="EQUITY",
-        disable_headless=False,
-        url="https://finance.yahoo.com/research-hub/screener/"
-):
-    chrome_options = Options()
-    if not disable_headless:
-        chrome_options.add_argument("--headless=new")
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_experimental_option("excludeSwitches", ["enable-logging", "enable-automation"])
-    chrome_options.add_experimental_option('useAutomationExtension', False)
-
-    driver = webdriver.Chrome(options=chrome_options)
-    file_name = f"{ticker_type}_{country}.json"
-    results = []
-    if ticker_type == "EQUITY":
-        url += "equity/"
-        driver.get(url)
-        accept_all(driver)
-        select_country(driver, country)
-        results = export_table(driver)
-    elif ticker_type == "ETF":
-        url += "etf/"
-        driver.get(url)
-        accept_all(driver)
-        select_exchange(driver, country)
-        results = export_table(driver)
-    else:
-        return
-
-    if results:
-        with open(file_name, "w") as eq_file:
-            json.dump(results, eq_file, indent=4, sort_keys=True)
-        print(f"✅ Exported to {file_name}")
-
-    input()
-    driver.close()
+def save_to_file(data, filename, output_dir="output"):
+    with open(os.path.join(output_dir, filename), "w") as f:
+        json.dump(data, f, indent=2)
+    print(f"💾 Saved {len(data)} tickers to '{filename}'")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Fetch stock tickers using scraper")
+    parser = argparse.ArgumentParser()
     parser.add_argument(
         "--country",
         required=True,
-        type=str,
-        help=(
-            "Name of the Country. For example, United States, United Kingdom, etc. "
-            "For ETF, please provide Exchange instead of Country"
-        )
+        help="Country or region filter (e.g., 'India')"
     )
     parser.add_argument(
         "--type",
         required=True,
+        choices=["EQUITY", "ETF"],
         default="EQUITY",
-        type=str,
-        help="Ticker Type. For example, EQUITY, ETF, etc."
+        help="Ticker type"
     )
     parser.add_argument(
         "--disable-headless",
         action="store_true",
-        help="True or False for headless Chrome"
+        help="Disable headless mode for browser"
     )
     args = parser.parse_args()
-    export_tickers(args.country, args.type, args.disable_headless)
+
+    scraper = Scraper(
+        ticker_type=args.type,
+        region=args.country,
+        headless=not args.disable_headless
+    )
+    tickers = scraper.run()
+    if tickers:
+        save_to_file(tickers, f"{args.type}_{args.country}.json")
