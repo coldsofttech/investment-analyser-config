@@ -141,12 +141,13 @@ class StockFetcher:
                 "dividendYield": StockFetcher.safe_get(info, "dividendYield", ""),
                 "dividendFrequency": StockCalculator.calculate_dividend_frequency(valid_div_data),
                 "website": StockFetcher.safe_get(info, "website", ""),
-                "currentPrice": float(StockFetcher.safe_get(info, "currentPrice", csv_data.iloc[-1][price_col]))
+                "currentPrice": float(StockFetcher.safe_get(info, "currentPrice", csv_data.iloc[-1][price_col])),
+                "isDowngrading": StockUtils.is_downgrading(valid_data, price_col)
             }
 
-            cagr = StockCalculator.calculate_short_and_long_term_cagr(valid_data, price_col)
-            result["shortTermCagr"] = cagr.get("shortTermCagr", None)
-            result["longTermCagr"] = cagr.get("longTermCagr", None)
+            historical_cagr = StockCalculator.calculate_historical_short_and_long_term_cagr(valid_data, price_col)
+            result["shortTermCagr"] = historical_cagr.get("shortTermCagr", None)
+            result["longTermCagr"] = historical_cagr.get("longTermCagr", None)
 
             if ticker_type.lower() == "etf":
                 result["marketCap"] = StockFetcher.safe_get(info, "totalAssets", "")
