@@ -1,11 +1,5 @@
-import argparse
-import io
-import json
-import os
-import re
-import sys
+import random
 import time
-from functools import wraps
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -15,51 +9,8 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from tqdm import tqdm
 
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-
-
-def retry(max_retries=5, delay=1.0):
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            for attempt in range(max_retries):
-                try:
-                    return func(*args, **kwargs)
-                except Exception as e:
-                    print(f"⚠️ Warning: {func.__name__} failed: {e} (attempt: {attempt + 1}).")
-                    time.sleep(delay)
-            raise RuntimeError(f"❌ {func.__name__} failed after {max_retries} retries.")
-
-        return wrapper
-
-    return decorator
-
-
-class ScraperUtils:
-    @staticmethod
-    def retry_click(wait, xpath):
-        @retry(max_retries=5, delay=1)
-        def click():
-            elem = wait.until(EC.element_to_be_clickable((By.XPATH, xpath)))
-            elem.click()
-            return elem
-
-        return click()
-
-    @staticmethod
-    def wait_for_presence(wait, xpath):
-        return wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
-
-    @staticmethod
-    def send_keys_to_element(element, keys):
-        element.clear()
-        element.send_keys(keys)
-        time.sleep(0.3)
-
-    @staticmethod
-    def extract_number_from_text(text, pattern=r'of\s+([\d,]+)'):
-        match = re.search(pattern, text)
-        return int(match.group(1).replace(',', '')) if match else 0
+from scraper_retry import retry
+from scraper_utils import ScraperUtils
 
 
 class Scraper:
@@ -81,7 +32,11 @@ class Scraper:
         print("🚀 Launching Chrome browser...")
         return webdriver.Chrome(options=options)
 
+    def _wait(self, a, b):
+        time.sleep(random.uniform(a, b))
+
     def visit(self):
+        self._wait(0.1, 0.5)
         print(f"🌐 Navigating to {self.base_url}")
         self.driver.get(self.base_url)
         self._accept_all()
@@ -97,6 +52,7 @@ class Scraper:
             print("ℹ️ Consent dialog not found or already accepted.")
 
     def _select_dropdown_option(self, label, value):
+        self._wait(1, 2)
         print(f"🔍 Selecting '{value}' in dropdown labeled '{label}'...")
         ScraperUtils.retry_click(
             self.wait, f'//button[contains(@class, "menuBtn") and .//div[text()="{label}"]]'
@@ -116,6 +72,7 @@ class Scraper:
         print(f"✅ Selected '{value}' in '{label}' dropdown.")
 
     def apply_filters(self):
+        self._wait(1, 2)
         if self.ticker_type == "EQUITY":
             self._select_dropdown_option("Region", self.region)
         elif self.ticker_type == "ETF":
@@ -136,7 +93,7 @@ class Scraper:
         return self.driver.find_elements(By.XPATH, '//table//tbody/tr')
 
     @staticmethod
-    @retry(max_retries=5, delay=2)
+    @retry(max_retries=10, delay=2)
     def _click_next_page(driver, prev_first):
         next_btn = driver.find_element(
             By.XPATH, '//button[@aria-label="Goto next page"]'
@@ -155,6 +112,7 @@ class Scraper:
         ).text.strip() != prev_first)
 
     def scrape_tickers(self):
+        self._wait(1, 2)
         print("📋 Starting ticker extraction...")
         tickers = []
         total_rows = self._extract_total_rows()
@@ -214,40 +172,3 @@ class Scraper:
         finally:
             print("🧹 Closing browser...")
             self.driver.quit()
-
-
-def save_to_file(data, filename, output_dir="output"):
-    with open(os.path.join(output_dir, filename), "w") as f:
-        json.dump(data, f, indent=2)
-    print(f"💾 Saved {len(data)} tickers to '{filename}'")
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--country",
-        required=True,
-        help="Country or region filter (e.g., 'India')"
-    )
-    parser.add_argument(
-        "--type",
-        required=True,
-        choices=["EQUITY", "ETF"],
-        default="EQUITY",
-        help="Ticker type"
-    )
-    parser.add_argument(
-        "--disable-headless",
-        action="store_true",
-        help="Disable headless mode for browser"
-    )
-    args = parser.parse_args()
-
-    scraper = Scraper(
-        ticker_type=args.type,
-        region=args.country,
-        headless=not args.disable_headless
-    )
-    tickers = scraper.run()
-    if tickers:
-        save_to_file(tickers, f"{args.type}_{args.country}.json")
