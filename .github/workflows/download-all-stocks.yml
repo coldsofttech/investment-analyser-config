@@ -90,7 +90,7 @@ jobs:
 
       - name: Run Export
         env:
-          MAX_WORKERS: 10
+          MAX_WORKERS: 2
         run: |
           echo "🚀 Running for chunk ID: ${{ matrix.chunk_id }}"
           python stocks/export_all.py --chunk-id ${{ matrix.chunk_id }} --max-workers $MAX_WORKERS

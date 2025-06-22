@@ -15,8 +15,9 @@ from stock_utils import StockUtils
 
 class StockFetcher:
     @staticmethod
-    @retry(max_retries=5, delay=2)
+    @retry(max_retries=5, delay=2, backoff=2, jitter=True)
     def download_stock_info(raw_data):
+        time.sleep(random.uniform(0.1, 0.5))
         csv_data = pd.read_csv(
             StringIO(raw_data.to_csv(index=True)),
             index_col='Date',
@@ -26,8 +27,9 @@ class StockFetcher:
         return csv_data, price_col
 
     @staticmethod
-    @retry(max_retries=5, delay=2)
+    @retry(max_retries=5, delay=2, backoff=2, jitter=True)
     def fetch_history(ticker_obj, period='max'):
+        time.sleep(random.uniform(0.1, 0.5))
         data = ticker_obj.history(period=period)
 
         if data.empty and period == 'max':
@@ -40,8 +42,9 @@ class StockFetcher:
         return data
 
     @staticmethod
-    @retry(max_retries=5, delay=2)
+    @retry(max_retries=5, delay=2, backoff=2, jitter=True)
     def fetch_info(ticker_obj):
+        time.sleep(random.uniform(0.1, 0.5))
         info = ticker_obj.info
         if not info or len(info) < 5:
             print(f"🔁 Retrying by forcing re-fetch for {ticker_obj.ticker}")
@@ -53,12 +56,12 @@ class StockFetcher:
         return info
 
     @staticmethod
-    @retry(max_retries=5, delay=2)
+    @retry(max_retries=5, delay=2, backoff=2, jitter=True)
     def fetch_dividends(ticker_obj):
         return ticker_obj.dividends.copy()
 
     @staticmethod
-    @retry(max_retries=5, delay=2)
+    @retry(max_retries=5, delay=2, backoff=2, jitter=True)
     def fetch_calendar(ticker_obj):
         return ticker_obj.calendar or {}
 
@@ -109,7 +112,7 @@ class StockFetcher:
 
     @staticmethod
     def fetch_ticker(ticker):
-        time.sleep(random.uniform(0.1, 0.5))
+        time.sleep(random.uniform(0.5, 2.5))
 
         try:
             print(f"📥 Fetching data for {ticker}...")
