@@ -6,10 +6,18 @@ on:
       country:
         description: "Country or region filter (e.g., 'India')"
         required: true
-      type:
+      ticker_type:
         description: "Ticker type"
         required: true
         default: "EQUITY"
+        type: choice
+        options:
+          - EQUITY
+          - ETF
+
+permissions:
+  contents: read
+  actions: read
 
 jobs:
   scrape:
@@ -30,9 +38,9 @@ jobs:
       - name: Run Export
         env:
           COUNTRY: ${{ github.event.inputs.country }}
-          TYPE: ${{ github.event.inputs.type }}
+          TICKER_TYPE: ${{ github.event.inputs.ticker_type }}
         run: |
-          python scraper/export_stocks.py --country "$COUNTRY" --type "$TYPE"
+          python scraper/export_stocks.py --country "$COUNTRY" --type "$TICKER_TYPE"
 
       - name: Upload JSON Artifact
         if: success()
