@@ -219,11 +219,17 @@ class StockFetcher:
                     "currency": StockFetcher.safe_get(info, "currency", ""),
                     "beta": StockFetcher.safe_get(info, "beta", ""),
                     "payoutRatio": StockFetcher.safe_get(info, "payoutRatio", ""),
-                    "dividendYield": StockFetcher.safe_get(info, "dividendYield", ""),
+                    "dividendYield": StockFetcher.safe_float(StockFetcher.safe_get(info, "dividendYield", "")),
                     "dividendFrequency": StockCalculator.calculate_dividend_frequency(valid_div_data),
-                    "volatility": StockCalculator.calculate_volatility(raw_data.copy(), price_col),
-                    "maxDrawdown": StockCalculator.calculate_max_drawdown(csv_data.copy(), price_col),
-                    "sharpeRatio": StockCalculator.calculate_sharpe_ratio(raw_data.copy(), price_col)
+                    "volatility": StockFetcher.safe_float(
+                        StockCalculator.calculate_volatility(raw_data.copy(), price_col)
+                    ),
+                    "maxDrawdown": StockFetcher.safe_float(
+                        StockCalculator.calculate_max_drawdown(csv_data.copy(), price_col)
+                    ),
+                    "sharpeRatio": StockFetcher.safe_float(
+                        StockCalculator.calculate_sharpe_ratio(raw_data.copy(), price_col)
+                    )
                 },
                 "data": [
                     {"date": d.strftime('%Y-%m-%d'), "price": float(p)}
@@ -236,11 +242,13 @@ class StockFetcher:
                 "events": {
                     "dividends": {
                         "date": upcoming_div_date.strftime('%Y-%m-%d') if upcoming_div_date else None,
-                        "price": float(upcoming_div_amount) if upcoming_div_amount else None
+                        "price": StockFetcher.safe_float(upcoming_div_amount) if upcoming_div_amount else None
                     }
                 },
                 "priceInfo": {
-                    "currentPrice": float(StockFetcher.safe_get(info, "currentPrice", csv_data.iloc[-1][price_col]))
+                    "currentPrice": StockFetcher.safe_float(
+                        StockFetcher.safe_get(info, "currentPrice", csv_data.iloc[-1][price_col])
+                    )
                 }
             }
 
