@@ -7,22 +7,23 @@ def retry(max_retries=5, delay=1.0, backoff=2.0, jitter=True, max_delay=60.0):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            curr_delay = delay
-            for attempt in range(max_retries):
+            external_attempt = kwargs.get("attempt", 0)
+            for internal_retry in range(max_retries):
                 try:
                     return func(*args, **kwargs)
                 except Exception as e:
-                    print(f"⚠️ Warning: {func.__name__} failed: {e} (attempt: {attempt + 1}/{max_retries}).")
-                    sleep_time = curr_delay
-
+                    curr_delay = delay * (backoff ** external_attempt)
+                    curr_delay = min(curr_delay, max_delay)
                     if jitter:
                         jitter_factor = random.uniform(0.1, 0.5)
-                        sleep_time += jitter_factor
+                        curr_delay += jitter_factor
 
-                    sleep_time = min(sleep_time, max_delay)
-                    print(f"⏳ Retrying in {sleep_time:.2f} seconds...")
-                    time.sleep(sleep_time)
-                    curr_delay *= backoff
+                    print(
+                        f"⚠️ Warning: {func.__name__} failed: {e} (internal retry: "
+                        f"{internal_retry}, external attempt: {external_attempt})."
+                    )
+                    print(f"⏳ Retrying in {curr_delay:.2f} seconds...")
+                    time.sleep(curr_delay)
             raise RuntimeError(f"❌ {func.__name__} failed after {max_retries} retries.")
 
         return wrapper

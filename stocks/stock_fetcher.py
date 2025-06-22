@@ -16,7 +16,7 @@ from stock_utils import StockUtils
 class StockFetcher:
     @staticmethod
     @retry(max_retries=5, delay=2, backoff=2, jitter=True)
-    def download_stock_info(raw_data):
+    def download_stock_info(raw_data, attempt=0):
         csv_data = pd.read_csv(
             StringIO(raw_data.to_csv(index=True)),
             index_col='Date',
@@ -27,7 +27,7 @@ class StockFetcher:
 
     @staticmethod
     @retry(max_retries=5, delay=2, backoff=2, jitter=True)
-    def fetch_history(ticker_obj, period='max'):
+    def fetch_history(ticker_obj, period='max', attempt=0):
         data = ticker_obj.history(period=period)
 
         if data.empty and period == 'max':
@@ -41,7 +41,7 @@ class StockFetcher:
 
     @staticmethod
     @retry(max_retries=5, delay=2, backoff=2, jitter=True)
-    def fetch_info(ticker_obj):
+    def fetch_info(ticker_obj, attempt=0):
         info = ticker_obj.info
         if not info or len(info) < 5:
             print(f"🔁 Retrying by forcing re-fetch for {ticker_obj.ticker}")
@@ -108,14 +108,14 @@ class StockFetcher:
             return default
 
     @staticmethod
-    def fetch_ticker(ticker):
+    def fetch_ticker(ticker, attempt=0):
         try:
             print(f"📥 Fetching data for {ticker}...")
             yf_ticker = yf.Ticker(ticker)
 
-            raw_data = StockFetcher.fetch_history(yf_ticker)
-            csv_data, price_col = StockFetcher.download_stock_info(raw_data.copy())
-            info = StockFetcher.fetch_info(yf_ticker)
+            raw_data = StockFetcher.fetch_history(yf_ticker, attempt=attempt)
+            csv_data, price_col = StockFetcher.download_stock_info(raw_data.copy(), attempt=attempt)
+            info = StockFetcher.fetch_info(yf_ticker, attempt=attempt)
             dividends = StockFetcher.fetch_dividends(yf_ticker)
 
             valid_data = StockUtils.process_index(csv_data)

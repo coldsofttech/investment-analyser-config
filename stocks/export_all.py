@@ -16,12 +16,16 @@ from stock_utils import StockUtils
 def export_ticker(tickers, output_dir="output", error_log="error.log", max_workers=10, max_global_retries=5):
     os.makedirs(output_dir, exist_ok=True)
     remaining = set(tickers)
+    min_workers = 10
+    decay_rate = 0.2
     results = {}
     errors = {}
 
     for global_attempt in range(1, max_global_retries + 1):
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = {executor.submit(StockFetcher.fetch_ticker, t): t for t in remaining}
+        factor = (1 - decay_rate) ** (global_attempt - 1)
+        current_workers = max(int(max_workers * factor), min_workers)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=current_workers) as executor:
+            futures = {executor.submit(StockFetcher.fetch_ticker, t, global_attempt): t for t in remaining}
 
             for future in tqdm(
                 concurrent.futures.as_completed(futures),
