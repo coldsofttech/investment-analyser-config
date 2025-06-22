@@ -34,7 +34,7 @@ jobs:
         run: |
           CHUNK_SIZE=$CHUNK_SIZE
           echo "🔢 Using CHUNK_SIZE=$CHUNK_SIZE"
-          python stocks/split_stocks.py --input stocks/stocks.json --chunk-size "$CHUNK_SIZE"
+          python stocks/splitter.py --input stocks/stocks.json --chunk-size "$CHUNK_SIZE"
           echo "🔁 Reading chunk IDs from file..."
           echo "matrix=$(jq -c . < chunk_ids.json)" >> $GITHUB_OUTPUT
 
@@ -43,7 +43,7 @@ jobs:
         with:
           name: chunk-files
           path: chunks/
-          
+
   debug-matrix:
     needs: split-stocks
     if: ${{ github.event.inputs.enable_debug_mode == 'true' }}
@@ -85,7 +85,7 @@ jobs:
           MAX_WORKERS: 10
         run: |
           echo "🚀 Running for chunk ID: ${{ matrix.chunk_id }}"
-          python stocks/export_all_stocks.py --chunk-id ${{ matrix.chunk_id }} --max-workers $MAX_WORKERS
+          python stocks/export_all.py --chunk-id ${{ matrix.chunk_id }} --max-workers $MAX_WORKERS
 
       - name: Upload JSON Artifact
         if: success()
