@@ -1,7 +1,9 @@
 import argparse
+import io
 import json
 import os
 import re
+import sys
 import time
 from functools import wraps
 
@@ -12,6 +14,8 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from tqdm import tqdm
+
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 
 def retry(max_retries=5, delay=1.0):
