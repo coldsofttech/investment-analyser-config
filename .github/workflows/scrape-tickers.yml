@@ -1,0 +1,42 @@
+name: Scrape Tickers
+
+on:
+  workflow_dispatch:
+    inputs:
+      country:
+        description: "Country or region filter (e.g., 'India')"
+        required: true
+      type:
+        description: "Ticker type"
+        required: true
+        default: "EQUITY"
+
+jobs:
+  scrape:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Dependencies
+        run: |
+          pip install -r scraper/requirements.txt
+
+      - name: Run Export
+        env:
+          COUNTRY: ${{ github.event.inputs.country }}
+          TYPE: ${{ github.event.inputs.type }}
+        run: |
+          python scraper/export_stocks.py --country "$COUNTRY" --type "$TYPE"
+
+      - name: Upload JSON Artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scraper-${{ github.job }}-${{ strategy.job-index }}
+          path: output/*.json
