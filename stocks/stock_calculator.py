@@ -76,8 +76,8 @@ class StockCalculator:
     def calculate_historical_short_and_long_term_cagr(data, price_col, today=None):
         if data.empty:
             return {
-                "shortTermCagr": None,
-                "longTermCagr": None
+                "shortTermCagr": 0,
+                "longTermCagr": 0
             }
 
         if today is None:
@@ -116,7 +116,7 @@ class StockCalculator:
                 results[k] for k in labels
                 if results[k] is not None
             ]
-            return round(sum(values) / len(values), 2) if values else None
+            return round(sum(values) / len(values), 2) if values else 0
 
         return {
             "shortTermCagr": combine(["1y", "2y"]),
