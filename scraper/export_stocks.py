@@ -119,12 +119,17 @@ class Scraper:
         else:
             print(f"ℹ️ No filters applied for ticker type: {self.ticker_type}")
 
+    @retry(max_retries=5, delay=2)
     def _extract_total_rows(self):
         total_text_xpath = '//div[contains(@class,"total")]'
         total_elem = ScraperUtils.wait_for_presence(self.wait, total_text_xpath)
         total_rows = ScraperUtils.extract_number_from_text(total_elem.text)
         print(f"🔢 Total rows found: {total_rows}")
         return total_rows
+
+    @retry(max_retries=5, delay=2)
+    def _get_table_rows(self):
+        return self.driver.find_elements(By.XPATH, '//table//tbody/tr')
 
     @staticmethod
     @retry(max_retries=5, delay=2)
@@ -154,7 +159,7 @@ class Scraper:
         pbar = tqdm(total=total_rows, desc="Scrapping tickers", unit="tickers")
 
         while True:
-            rows = self.driver.find_elements(By.XPATH, '//table//tbody/tr')
+            rows = self._get_table_rows()
             if not rows:
                 print("⚠️ No rows found on page, ending scrape.")
                 break

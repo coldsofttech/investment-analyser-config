@@ -38,5 +38,5 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: scraper-${{ github.job }}-${{ strategy.job-index }}
+          name: scraper-${{ github.job }}
           path: output/*.json
