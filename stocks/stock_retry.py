@@ -13,8 +13,8 @@ def retry(max_retries=5, delay=0.0, backoff=2.0, jitter=True, max_delay=60.0):
                     return func(*args, **kwargs)
                 except Exception as e:
                     # curr_delay = delay * (backoff ** external_attempt)
-                    # curr_delay = delay + external_attempt * (external_attempt + 1) // 2
-                    curr_delay = 0.9 * (external_attempt * (external_attempt + 1)) // 2
+                    curr_delay = delay + external_attempt * (external_attempt + 1) // 2
+                    # curr_delay = 0.9 * (external_attempt * (external_attempt + 1)) // 2
                     curr_delay = min(curr_delay, max_delay)
                     if jitter:
                         jitter_factor = random.uniform(0.1, 0.5)
