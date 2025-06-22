@@ -8,7 +8,7 @@ on:
         required: true
       ticker_type:
         description: "Ticker type"
-        required: true
+        required: false
         default: "EQUITY"
         type: choice
         options:
@@ -36,11 +36,8 @@ jobs:
           pip install -r scraper/requirements.txt
 
       - name: Run Export
-        env:
-          COUNTRY: ${{ github.event.inputs.country }}
-          TICKER_TYPE: ${{ github.event.inputs.ticker_type }}
         run: |
-          python scraper/export_stocks.py --country "$COUNTRY" --type "$TICKER_TYPE"
+          python scraper/export_stocks.py --country "${{ github.event.inputs.country }}" --type "${{ github.event.inputs.ticker_type }}"
 
       - name: Upload JSON Artifact
         if: success()
