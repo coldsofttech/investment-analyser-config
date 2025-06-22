@@ -100,8 +100,16 @@ class StockCalculator:
 
             start_price = historical[price_col].iloc[-1]
             end_price = data[price_col].iloc[-1]
-            cagr = (end_price / start_price) ** (1 / years) - 1
-            results[label] = round(cagr * 100, 2)
+
+            if start_price <= 0 or end_price <= 0 or years <= 0:
+                results[label] = None
+                continue
+
+            try:
+                cagr = (end_price / start_price) ** (1 / years) - 1
+                results[label] = round(cagr * 100, 2)
+            except:
+                results[label] = None
 
         def combine(labels):
             values = [

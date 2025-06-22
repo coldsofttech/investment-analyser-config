@@ -17,6 +17,7 @@ class StockFetcher:
     @staticmethod
     @retry(max_retries=5, delay=2, backoff=2, jitter=True)
     def download_stock_info(raw_data, attempt=0):
+        time.sleep(random.uniform(0.1, 0.5))
         csv_data = pd.read_csv(
             StringIO(raw_data.to_csv(index=True)),
             index_col='Date',
@@ -28,6 +29,7 @@ class StockFetcher:
     @staticmethod
     @retry(max_retries=5, delay=2, backoff=2, jitter=True)
     def fetch_history(ticker_obj, period='max', attempt=0):
+        time.sleep(random.uniform(0.1, 0.5))
         data = ticker_obj.history(period=period)
 
         if data.empty and period == 'max':
@@ -42,6 +44,7 @@ class StockFetcher:
     @staticmethod
     @retry(max_retries=5, delay=2, backoff=2, jitter=True)
     def fetch_info(ticker_obj, attempt=0):
+        time.sleep(random.uniform(0.1, 0.5))
         info = ticker_obj.info
         if not info or len(info) < 5:
             print(f"🔁 Retrying by forcing re-fetch for {ticker_obj.ticker}")
@@ -109,6 +112,7 @@ class StockFetcher:
 
     @staticmethod
     def fetch_ticker(ticker, attempt=0):
+        time.sleep(random.uniform(0.1, 0.5) * attempt)
         try:
             print(f"📥 Fetching data for {ticker}...")
             yf_ticker = yf.Ticker(ticker)
