@@ -5,6 +5,10 @@ on:
   schedule:
     - cron: '0 1 * * *'  # Daily at 1 AM UTC
 
+permissions:
+  contents: write
+  actions: write
+
 jobs:
   split-fxpairs:
     runs-on: ubuntu-latest
@@ -22,6 +26,10 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Install Dependencies
+        run: |
+          pip install -r fxrates/requirements.txt
+
       - name: Install jq
         run: |
           sudo apt-get install jq
@@ -33,7 +41,7 @@ jobs:
         run: |
           CHUNK_SIZE=${CHUNK_SIZE:-6}
           echo "🔢 Using CHUNK_SIZE=$CHUNK_SIZE"
-          MATRIX=$(python fxrates/split_fxpairs.py fxrates/fxpairs.json "$CHUNK_SIZE" | jq -c .)
+          MATRIX=$(python fxrates/splitter.py --input fxrates/fxpairs.json --chunk-size "$CHUNK_SIZE" | jq -c .)
           echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
 
   run-fetch:
@@ -58,7 +66,7 @@ jobs:
       - name: Run Export
         run: |
           FXPAIRS_JSON='${{ toJson(matrix.chunk) }}'
-          python fxrates/export_fxrates.py --fxpairs "$FXPAIRS_JSON"
+          python fxrates/export.py --fxpairs "$FXPAIRS_JSON"
 
       - name: Upload Artifact
         if: success()
