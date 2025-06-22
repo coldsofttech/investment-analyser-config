@@ -15,6 +15,10 @@ on:
           - EQUITY
           - ETF
 
+permissions:
+  contents: read
+  actions: read
+
 jobs:
   scrape:
     runs-on: windows-latest
