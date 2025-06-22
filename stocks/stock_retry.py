@@ -16,7 +16,7 @@ def retry(max_retries=5, delay=1.0, backoff=2.0, jitter=True, max_delay=60.0):
                     sleep_time = curr_delay
 
                     if jitter:
-                        jitter_factor = random.uniform(0.8, 1.2)
+                        jitter_factor = random.uniform(0.1, 0.5)
                         sleep_time += jitter_factor
 
                     sleep_time = min(sleep_time, max_delay)
