@@ -167,11 +167,11 @@ class StockFetcher:
             return {"error": f"Failed to fetch {ticker}: {str(e)}"}
 
     @staticmethod
-    def fetch_ticker_detailed(ticker, output_dir="output"):
-        time.sleep(random.uniform(0.1, 0.5))
+    def fetch_ticker_detailed(ticker, output_dir="output", attempt=0):
+        time.sleep(random.uniform(0.1, 0.5) * attempt)
 
         try:
-            print(f"📥 Fetching data for {ticker}...")
+            # print(f"📥 Fetching data for {ticker}...")
             timestamp = datetime.now().isoformat()
             yf_ticker = yf.Ticker(ticker)
 
@@ -183,7 +183,7 @@ class StockFetcher:
                 calendar = StockFetcher.fetch_calendar(yf_ticker)
             except Exception as e:
                 calendar = {}
-                print(f"⚠️ Skipping calendar for {ticker} after retries: {e}")
+                # print(f"⚠️ Skipping calendar for {ticker} after retries: {e}")
 
             dividends = StockFetcher.fetch_dividends(yf_ticker)
             valid_data = StockUtils.process_index(csv_data)
@@ -250,5 +250,6 @@ class StockFetcher:
                 json.dump(result_dict, f, indent=4, sort_keys=True)
 
             print(f"✅ Saved: {output_path}.")
+            return {"success": True}
         except Exception as e:
-            raise RuntimeError(f"Failed to fetch {ticker}: {str(e)}")
+            return {"error": f"Failed to fetch {ticker}: {str(e)}"}
