@@ -38,7 +38,7 @@ jobs:
       - name: Generate Matrix Chunks
         id: gen_matrix
         env:
-          CHUNK_SIZE: 1000
+          CHUNK_SIZE: 200
         run: |
           CHUNK_SIZE=$CHUNK_SIZE
           echo "🔢 Using CHUNK_SIZE=$CHUNK_SIZE"
