@@ -19,10 +19,10 @@ def retry(max_retries=5, delay=1.0, backoff=2.0, jitter=True, max_delay=60.0):
                         jitter_factor = random.uniform(0.1, 0.5)
                         curr_delay += jitter_factor
 
-                    print(
-                        f"⚠️ Warning: {func.__name__} failed: {e} (internal retry: "
-                        f"{internal_retry}, external attempt: {external_attempt})."
-                    )
+                    # print(
+                    #     f"⚠️ Warning: {func.__name__} failed: {e} (internal retry: "
+                    #     f"{internal_retry}, external attempt: {external_attempt})."
+                    # )
                     print(f"⏳ Retrying in {curr_delay:.2f} seconds...")
                     time.sleep(curr_delay)
             raise RuntimeError(f"❌ {func.__name__} failed after {max_retries} retries.")

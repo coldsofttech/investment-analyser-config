@@ -24,6 +24,7 @@ def export_ticker(tickers, output_dir="output", error_log="error.log", max_worke
     for global_attempt in range(0, max_global_retries):
         factor = (1 - decay_rate) ** (global_attempt - 1)
         current_workers = max(int(max_workers * factor), min_workers)
+        print(f"🔁 Attempt: {global_attempt} with {current_workers} workers.")
         with concurrent.futures.ThreadPoolExecutor(max_workers=current_workers) as executor:
             futures = {executor.submit(StockFetcher.fetch_ticker, t, global_attempt): t for t in remaining}
 
