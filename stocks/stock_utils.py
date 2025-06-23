@@ -112,3 +112,30 @@ class StockUtils:
             json.dump(merged_data, out_file, indent=4, sort_keys=True)
 
         print(f"✅ Merged {len(merged_data)} unique tickers into {file_name}.")
+
+    @staticmethod
+    def is_downgrading(data, price_col):
+        if data.empty:
+            return True
+
+        if data.shape[0] < 200 or price_col not in data.columns or 'Volume' not in data.columns:
+            return False
+
+        if data.shape[0] < 5:
+            return False
+
+        data = data.copy()
+        data['50ma'] = data[price_col].rolling(window=50).mean()
+        data['200ma'] = data[price_col].rolling(window=200).mean()
+        data['volume_avg'] = data['Volume'].rolling(window=20).mean()
+
+        if data[['50ma', '200ma', 'volume_avg']].iloc[-1].isnull().any():
+            return False
+
+        latest = data.iloc[-1]
+        recent_price = data[price_col].iloc[-5]
+        price_drop = latest[price_col] < recent_price * 0.95
+        volume_spike = latest['Volume'] > 1.5 * latest['volume_avg']
+        below_ma = (latest[price_col] < latest['50ma']) and (latest[price_col] < latest['200ma'])
+
+        return bool(price_drop and volume_spike and below_ma)

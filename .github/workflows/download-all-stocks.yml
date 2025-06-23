@@ -38,7 +38,7 @@ jobs:
       - name: Generate Matrix Chunks
         id: gen_matrix
         env:
-          CHUNK_SIZE: 1000
+          CHUNK_SIZE: 200
         run: |
           CHUNK_SIZE=$CHUNK_SIZE
           echo "🔢 Using CHUNK_SIZE=$CHUNK_SIZE"
@@ -90,10 +90,10 @@ jobs:
 
       - name: Run Export
         env:
-          MAX_WORKERS: 10
+          MAX_WORKERS: 80
         run: |
           echo "🚀 Running for chunk ID: ${{ matrix.chunk_id }}"
-          python stocks/export_all.py --chunk-id ${{ matrix.chunk_id }} --max-workers $MAX_WORKERS
+          python stocks/export_all.py --chunk-id ${{ matrix.chunk_id }} --max-workers $MAX_WORKERS --max-global-retries 8
 
       - name: Upload JSON Artifact
         if: success()

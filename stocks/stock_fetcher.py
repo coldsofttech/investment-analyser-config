@@ -1,4 +1,5 @@
 import json
+import math
 import os
 import random
 import time
@@ -15,8 +16,9 @@ from stock_utils import StockUtils
 
 class StockFetcher:
     @staticmethod
-    @retry(max_retries=5, delay=2)
-    def download_stock_info(raw_data):
+    @retry(max_retries=5, delay=2, backoff=2, jitter=True)
+    def download_stock_info(raw_data, attempt=0):
+        time.sleep(random.uniform(0.1, 0.5))
         csv_data = pd.read_csv(
             StringIO(raw_data.to_csv(index=True)),
             index_col='Date',
@@ -26,12 +28,13 @@ class StockFetcher:
         return csv_data, price_col
 
     @staticmethod
-    @retry(max_retries=5, delay=2)
-    def fetch_history(ticker_obj, period='max'):
+    @retry(max_retries=5, delay=2, backoff=2, jitter=True)
+    def fetch_history(ticker_obj, period='max', attempt=0):
+        time.sleep(random.uniform(0.1, 0.5))
         data = ticker_obj.history(period=period)
 
         if data.empty and period == 'max':
-            print(f"⚠️ 'max' period returned no data for {ticker_obj.ticker}, retrying with '20y'")
+            # print(f"⚠️ 'max' period returned no data for {ticker_obj.ticker}, retrying with '20y'")
             data = ticker_obj.history(period='20y')
 
         if data.empty:
@@ -40,11 +43,12 @@ class StockFetcher:
         return data
 
     @staticmethod
-    @retry(max_retries=5, delay=2)
-    def fetch_info(ticker_obj):
+    @retry(max_retries=5, delay=2, backoff=2, jitter=True)
+    def fetch_info(ticker_obj, attempt=0):
+        time.sleep(random.uniform(0.1, 0.5))
         info = ticker_obj.info
         if not info or len(info) < 5:
-            print(f"🔁 Retrying by forcing re-fetch for {ticker_obj.ticker}")
+            # print(f"🔁 Retrying by forcing re-fetch for {ticker_obj.ticker}")
             info = ticker_obj.get_info()
 
         if not info or len(info) < 5:
@@ -53,12 +57,12 @@ class StockFetcher:
         return info
 
     @staticmethod
-    @retry(max_retries=5, delay=2)
+    @retry(max_retries=5, delay=2, backoff=2, jitter=True)
     def fetch_dividends(ticker_obj):
         return ticker_obj.dividends.copy()
 
     @staticmethod
-    @retry(max_retries=5, delay=2)
+    @retry(max_retries=5, delay=2, backoff=2, jitter=True)
     def fetch_calendar(ticker_obj):
         return ticker_obj.calendar or {}
 
@@ -108,16 +112,25 @@ class StockFetcher:
             return default
 
     @staticmethod
-    def fetch_ticker(ticker):
-        time.sleep(random.uniform(0.1, 0.5))
-
+    def safe_float(val, default=0.0):
         try:
-            print(f"📥 Fetching data for {ticker}...")
+            val = float(val)
+            if math.isnan(val) or math.isinf(val):
+                return default
+            return val
+        except:
+            return default
+
+    @staticmethod
+    def fetch_ticker(ticker, attempt=0):
+        time.sleep(random.uniform(0.1, 0.5) * attempt)
+        try:
+            # print(f"📥 Fetching data for {ticker}...")
             yf_ticker = yf.Ticker(ticker)
 
-            raw_data = StockFetcher.fetch_history(yf_ticker)
-            csv_data, price_col = StockFetcher.download_stock_info(raw_data.copy())
-            info = StockFetcher.fetch_info(yf_ticker)
+            raw_data = StockFetcher.fetch_history(yf_ticker, attempt=attempt)
+            csv_data, price_col = StockFetcher.download_stock_info(raw_data.copy(), attempt=attempt)
+            info = StockFetcher.fetch_info(yf_ticker, attempt=attempt)
             dividends = StockFetcher.fetch_dividends(yf_ticker)
 
             valid_data = StockUtils.process_index(csv_data)
@@ -137,16 +150,17 @@ class StockFetcher:
                 "country": StockFetcher.safe_get(info, "region", ""),
                 "currency": StockFetcher.safe_get(info, "currency", ""),
                 "beta": StockFetcher.safe_get(info, "beta", ""),
-                "volatility": StockCalculator.calculate_volatility(raw_data.copy(), price_col),
-                "dividendYield": StockFetcher.safe_get(info, "dividendYield", ""),
+                "volatility": StockFetcher.safe_float(StockCalculator.calculate_volatility(raw_data.copy(), price_col)),
+                "dividendYield": StockFetcher.safe_float(StockFetcher.safe_get(info, "dividendYield", "")),
                 "dividendFrequency": StockCalculator.calculate_dividend_frequency(valid_div_data),
                 "website": StockFetcher.safe_get(info, "website", ""),
-                "currentPrice": float(StockFetcher.safe_get(info, "currentPrice", csv_data.iloc[-1][price_col]))
+                "currentPrice": StockFetcher.safe_float(StockFetcher.safe_get(info, "currentPrice", csv_data.iloc[-1][price_col])),
+                "isDowngrading": StockUtils.is_downgrading(valid_data, price_col)
             }
 
-            cagr = StockCalculator.calculate_short_and_long_term_cagr(valid_data, price_col)
-            result["shortTermCagr"] = cagr.get("shortTermCagr", None)
-            result["longTermCagr"] = cagr.get("longTermCagr", None)
+            historical_cagr = StockCalculator.calculate_historical_short_and_long_term_cagr(valid_data, price_col)
+            result["shortTermCagr"] = StockFetcher.safe_float(historical_cagr.get("shortTermCagr", 0))
+            result["longTermCagr"] = StockFetcher.safe_float(historical_cagr.get("longTermCagr", 0))
 
             if ticker_type.lower() == "etf":
                 result["marketCap"] = StockFetcher.safe_get(info, "totalAssets", "")
@@ -161,14 +175,14 @@ class StockFetcher:
 
             return result
         except Exception as e:
-            raise RuntimeError(f"Failed to fetch {ticker}: {str(e)}")
+            return {"error": f"Failed to fetch {ticker}: {str(e)}"}
 
     @staticmethod
-    def fetch_ticker_detailed(ticker, output_dir="output"):
-        time.sleep(random.uniform(0.1, 0.5))
+    def fetch_ticker_detailed(ticker, output_dir="output", attempt=0):
+        time.sleep(random.uniform(0.1, 0.5) * attempt)
 
         try:
-            print(f"📥 Fetching data for {ticker}...")
+            # print(f"📥 Fetching data for {ticker}...")
             timestamp = datetime.now().isoformat()
             yf_ticker = yf.Ticker(ticker)
 
@@ -180,7 +194,7 @@ class StockFetcher:
                 calendar = StockFetcher.fetch_calendar(yf_ticker)
             except Exception as e:
                 calendar = {}
-                print(f"⚠️ Skipping calendar for {ticker} after retries: {e}")
+                # print(f"⚠️ Skipping calendar for {ticker} after retries: {e}")
 
             dividends = StockFetcher.fetch_dividends(yf_ticker)
             valid_data = StockUtils.process_index(csv_data)
@@ -205,11 +219,17 @@ class StockFetcher:
                     "currency": StockFetcher.safe_get(info, "currency", ""),
                     "beta": StockFetcher.safe_get(info, "beta", ""),
                     "payoutRatio": StockFetcher.safe_get(info, "payoutRatio", ""),
-                    "dividendYield": StockFetcher.safe_get(info, "dividendYield", ""),
+                    "dividendYield": StockFetcher.safe_float(StockFetcher.safe_get(info, "dividendYield", "")),
                     "dividendFrequency": StockCalculator.calculate_dividend_frequency(valid_div_data),
-                    "volatility": StockCalculator.calculate_volatility(raw_data.copy(), price_col),
-                    "maxDrawdown": StockCalculator.calculate_max_drawdown(csv_data.copy(), price_col),
-                    "sharpeRatio": StockCalculator.calculate_sharpe_ratio(raw_data.copy(), price_col)
+                    "volatility": StockFetcher.safe_float(
+                        StockCalculator.calculate_volatility(raw_data.copy(), price_col)
+                    ),
+                    "maxDrawdown": StockFetcher.safe_float(
+                        StockCalculator.calculate_max_drawdown(csv_data.copy(), price_col)
+                    ),
+                    "sharpeRatio": StockFetcher.safe_float(
+                        StockCalculator.calculate_sharpe_ratio(raw_data.copy(), price_col)
+                    )
                 },
                 "data": [
                     {"date": d.strftime('%Y-%m-%d'), "price": float(p)}
@@ -222,11 +242,13 @@ class StockFetcher:
                 "events": {
                     "dividends": {
                         "date": upcoming_div_date.strftime('%Y-%m-%d') if upcoming_div_date else None,
-                        "price": float(upcoming_div_amount) if upcoming_div_amount else None
+                        "price": StockFetcher.safe_float(upcoming_div_amount) if upcoming_div_amount else None
                     }
                 },
                 "priceInfo": {
-                    "currentPrice": float(StockFetcher.safe_get(info, "currentPrice", csv_data.iloc[-1][price_col]))
+                    "currentPrice": StockFetcher.safe_float(
+                        StockFetcher.safe_get(info, "currentPrice", csv_data.iloc[-1][price_col])
+                    )
                 }
             }
 
@@ -247,5 +269,6 @@ class StockFetcher:
                 json.dump(result_dict, f, indent=4, sort_keys=True)
 
             print(f"✅ Saved: {output_path}.")
+            return {"success": True}
         except Exception as e:
-            raise RuntimeError(f"Failed to fetch {ticker}: {str(e)}")
+            return {"error": f"Failed to fetch {ticker}: {str(e)}"}
