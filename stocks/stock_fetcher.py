@@ -58,16 +58,20 @@ class StockFetcher:
 
     @staticmethod
     @retry(max_retries=5, delay=2, backoff=2, jitter=True)
-    def fetch_dividends(ticker_obj):
+    def fetch_dividends(ticker_obj, attempt=0):
+        time.sleep(random.uniform(0.1, 0.5))
         return ticker_obj.dividends.copy()
 
     @staticmethod
     @retry(max_retries=5, delay=2, backoff=2, jitter=True)
     def fetch_calendar(ticker_obj):
+        time.sleep(random.uniform(0.1, 0.5))
         return ticker_obj.calendar or {}
 
     @staticmethod
-    def fetch_top_holdings(ticker_obj):
+    @retry(max_retries=5, delay=2, backoff=2, jitter=True)
+    def fetch_top_holdings(ticker_obj, attempt=0):
+        time.sleep(random.uniform(0.1, 0.5))
         try:
             holdings = ticker_obj.funds_data.top_holdings
             if isinstance(holdings, pd.DataFrame):
@@ -90,7 +94,9 @@ class StockFetcher:
             return []
 
     @staticmethod
-    def fetch_sector_weightings(ticker_obj):
+    @retry(max_retries=5, delay=2, backoff=2, jitter=True)
+    def fetch_sector_weightings(ticker_obj, attempt=0):
+        time.sleep(random.uniform(0.1, 0.5))
         try:
             weights = ticker_obj.funds_data.sector_weightings
             r_weights = []
@@ -131,7 +137,7 @@ class StockFetcher:
             raw_data = StockFetcher.fetch_history(yf_ticker, attempt=attempt)
             csv_data, price_col = StockFetcher.download_stock_info(raw_data.copy(), attempt=attempt)
             info = StockFetcher.fetch_info(yf_ticker, attempt=attempt)
-            dividends = StockFetcher.fetch_dividends(yf_ticker)
+            dividends = StockFetcher.fetch_dividends(yf_ticker, attempt=attempt)
 
             valid_data = StockUtils.process_index(csv_data)
             valid_div_data = StockUtils.process_index(dividends)
@@ -196,7 +202,7 @@ class StockFetcher:
                 calendar = {}
                 # print(f"⚠️ Skipping calendar for {ticker} after retries: {e}")
 
-            dividends = StockFetcher.fetch_dividends(yf_ticker)
+            dividends = StockFetcher.fetch_dividends(yf_ticker, attempt=attempt)
             valid_data = StockUtils.process_index(csv_data)
             valid_div_data = StockUtils.process_index(dividends)
             upcoming_div_date, upcoming_div_amount = StockCalculator.calculate_upcoming_dividend(
@@ -254,8 +260,8 @@ class StockFetcher:
 
             if ticker_type.lower() == "etf":
                 ticker_dict["holdings"] = {
-                    "topHoldings": StockFetcher.fetch_top_holdings(yf_ticker),
-                    "sectorWeights": StockFetcher.fetch_sector_weightings(yf_ticker)
+                    "topHoldings": StockFetcher.fetch_top_holdings(yf_ticker, attempt=attempt),
+                    "sectorWeights": StockFetcher.fetch_sector_weightings(yf_ticker, attempt=attempt)
                 }
                 ticker_dict["info"]["marketCap"] = StockFetcher.safe_get(info, "totalAssets", "")
             else:
