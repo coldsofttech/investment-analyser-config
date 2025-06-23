@@ -35,7 +35,11 @@ def export_ticker(tickers, output_dir="output", error_log="error.log", max_worke
                 unit="tickers"
             ):
                 ticker = futures[future]
-                results[ticker] = future.result()
+                result = future.result()
+                results[ticker] = result
+
+                if global_attempt == max_global_retries - 1 and result.get("error", None):
+                    errors[ticker] = result["error"]
 
         failed = {
             t for t, r in results.items()
