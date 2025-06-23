@@ -51,9 +51,9 @@ jobs:
           MATRIX=$(jq -c . < chunk_ids.json)
           
           if [[ "$GITHUB_REF" == "refs/heads/test" && "${{ github.event.inputs.run_full_load }}" != "true" ]]; then
-            echo "⚠️ Test branch: limiting matrix to 1 chunk (run_full_load=false)"
-            LIMITED_MATRIX=$(echo "$MATRIX" | jq -c '.[0:1]')
-            echo "matrix=$LIMITED_MATRIX" >> $GITHUB_OUTPUT
+            echo "⚠️ Test branch: limiting matrix to 1 random chunk (run_full_load=false)"
+            RANDOM_CHUNK=$(jq '. | map(.) | .[]' chunk_ids.json | shuf -n 1)
+            echo "matrix=[$RANDOM_CHUNK]" >> $GITHUB_OUTPUT
           else
             echo "✅ Using full matrix"
             echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
