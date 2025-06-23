@@ -7,6 +7,10 @@ on:
         description: 'Run debug-matrix job?'
         required: false
         default: false
+      run_full_load:
+        description: 'Run full load in test branch?'
+        required: false
+        default: false
   schedule:
     - cron: '30 0 * * 6'  # Every Saturday at 12:30 AM UTC
 
@@ -44,7 +48,16 @@ jobs:
           echo "🔢 Using CHUNK_SIZE=$CHUNK_SIZE"
           python stocks/splitter.py --input stocks/stocks.json --chunk-size "$CHUNK_SIZE"
           echo "🔁 Reading chunk IDs from file..."
-          echo "matrix=$(jq -c . < chunk_ids.json)" >> $GITHUB_OUTPUT
+          MATRIX=$(jq -c . < chunk_ids.json)
+          
+          if [[ "$GITHUB_REF" == "refs/heads/test" && "${{ github.event.inputs.run_full_load }}" != "true" ]]; then
+            LIMITED_MATRIX=$(echo "$MATRIX" | jq '[.[:1]]')
+            echo "⚠️ Test branch: limiting matrix to 1 chunk (run_full_load=false)"
+            echo "matrix=$LIMITED_MATRIX" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Using full matrix"
+            echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+          fi
 
       - name: Upload Chunks
         uses: actions/upload-artifact@v4
