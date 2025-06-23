@@ -9,7 +9,8 @@ class StockCalculator:
         price_series = raw_data[price_col].dropna()
         if len(price_series) < 2:
             return 0.0
-        returns = price_series.pct_change().dropna()
+        # returns = price_series.pct_change().dropna()
+        returns = price_series.pct_change(fill_method=None).dropna()
         if returns.empty:
             return 0.0
         daily_vol = returns.std()
@@ -25,7 +26,8 @@ class StockCalculator:
 
     @staticmethod
     def calculate_sharpe_ratio(raw_data, price_col, risk_free_rate=0.01):
-        returns = raw_data[price_col].pct_change().dropna()
+        # returns = raw_data[price_col].pct_change().dropna()
+        returns = raw_data[price_col].pct_change(fill_method=None).dropna()
         avg_daily_return = returns.mean()
         std_daily_return = returns.std()
         if std_daily_return == 0:
