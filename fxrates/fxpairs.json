@@ -82,5 +82,13 @@
   {
     "from": "USD",
     "to": "GBp"
+  },
+  {
+    "from": "GBP",
+    "to": "CHF"
+  },
+  {
+    "from": "CHF",
+    "to": "GBP"
   }
 ]
